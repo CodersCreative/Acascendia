@@ -1,0 +1,52 @@
+@page "/login"
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Mvc
+@using Microsoft.Extensions.ObjectPool
+@using SurrealDb.Net
+@using SurrealDb.Net.Models.Auth
+@using System.Threading.Tasks
+@inject NavigationManager NavigationManager
+@inject UserInfo user
+@inject SurrealDbClient Client
+@rendermode InteractiveServer
+
+<div style="display: flex; justify-content: center;">
+    <MudPaper Class="pa-4" style="width : 600px; ">
+        <MudText Typo="Typo.h3">Login</MudText>
+        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors" >
+            <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" @ref="usernameField" />
+            <MudTextField T="string" Label="Password" HelperText="Choose a strong password" @ref="pwField1"
+                        InputType="InputType.Password"
+                        RequiredError="Password is required!"/>
+            <div>
+                <MudButton OnClick="OnSignup" Variant="Variant.Filled" Color="Color.Secondary" Class="ml-auto">Sign-up</MudButton>
+                <MudButton OnClick="OnSubmit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Login</MudButton>
+            </div>
+        </MudForm>
+    </MudPaper>
+</div>
+
+@code {
+    bool success;
+    string[] errors = { };
+    MudTextField<string> usernameField;
+    MudTextField<string> pwField1;
+    MudForm form;
+
+    private async Task OnSubmit() {
+        var res = await Client.Query($"SELECT * FROM user WHERE Username = {usernameField.Value} and Password = {pwField1.Value} LIMIT 1;");
+        
+        var res2 = res.GetValue<List<UserInfo>>(0)!.First();
+
+        if (res2 is not null) {
+            user = res2;
+        }
+
+        NavigationManager.NavigateTo("/counter");
+    }
+
+    private void OnSignup() {
+        NavigationManager.NavigateTo("/signup");
+    }
+}

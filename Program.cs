@@ -1,20 +1,23 @@
 using Acascendia.Components;
 using MudBlazor.Services;
 using SurrealDb.Net;
+using SurrealDb.Net.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var surreal = 
+var surreal =
 SurrealDbOptions
   .Create()
   .WithEndpoint("http://127.0.0.1:8000")
   .WithNamespace("main")
+  .WithDatabase("main")
   .Build();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+builder.Services.AddSingleton<UserInfo>();
 builder.Services.AddSurreal(surreal);
 
 var app = builder.Build();
@@ -35,19 +38,29 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-await InitializeDbAsync();    
+await InitializeDbAsync();
 
 app.Run();
 
 async Task InitializeDbAsync()
 {
     var surrealDbClient = new SurrealDbClient(surreal);
-
     await DefineSchemaAsync(surrealDbClient);
 }
 
-
 async Task DefineSchemaAsync(ISurrealDbClient surrealDbClient)
 {
-    await surrealDbClient.RawQuery("");
+    await surrealDbClient.RawQuery("""
+DEFINE TABLE IF NOT EXISTS user SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS Username ON TABLE user TYPE string;
+DEFINE FIELD IF NOT EXISTS Email ON TABLE user TYPE string;
+DEFINE FIELD IF NOT EXISTS Password ON TABLE user TYPE string; 
+""");
+}
+
+public class UserInfo : Record
+{
+    public string? Username {get; set;}
+    public string? Email {get; set;}
+    public string? Password {get; set;}
 }
