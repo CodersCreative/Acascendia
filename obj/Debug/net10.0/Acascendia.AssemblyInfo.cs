@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Acascendia")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7321a1831b972949eeb6372368d84b80b757eb06")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c706fbcfe8737ec52b4dbbfb81ccf9c6a3ec7af9")]
 [assembly: System.Reflection.AssemblyProductAttribute("Acascendia")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Acascendia")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
