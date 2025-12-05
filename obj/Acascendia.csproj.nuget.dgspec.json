@@ -50,6 +50,14 @@
               "target": "Package",
               "version": "[10.0.0, )",
               "autoReferenced": true
+            },
+            "MudBlazor": {
+              "target": "Package",
+              "version": "[8.15.0, )"
+            },
+            "SurrealDb.Net": {
+              "target": "Package",
+              "version": "[0.9.0, )"
             }
           },
           "imports": [
