@@ -1,0 +1,34 @@
+﻿@page "/chat/{chatId}"
+@using Acascendia.Models
+@using SurrealDb.Net
+@using SurrealDb.Net.Models
+@inject Data data
+@inject SurrealDbClient client
+@attribute [StreamRendering]
+@rendermode InteractiveServer
+
+<PageTitle>Chat</PageTitle>
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"  />
+        <MudText Typo="Typo.h6">@name</MudText>
+        <MudSpacer />
+    </MudAppBar>
+    <MudMainContent Class="pt-16 px-16">
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    [Parameter]
+    public string chatId {get; set;}
+    private string? name;
+    private Chat? chat;
+    private List<Message> messages = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        chat = await client.Select<Chat>(("chat", chatId));
+        name = await chat.GetName(client, data.user.Id.DeserializeId<string>());
+    }
+}

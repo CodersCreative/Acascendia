@@ -3,9 +3,9 @@
 @using Microsoft.Extensions.ObjectPool
 @using SurrealDb.Net
 @using SurrealDb.Net.Models
-@inject SurrealDbClient Client
+@inject NavigationManager navigationManager
 @inject Data data
-@inject SurrealDbClient Client
+@inject SurrealDbClient client
 @attribute [StreamRendering]
 @rendermode InteractiveServer
 
@@ -24,9 +24,9 @@
         </MudDrawerHeader>
         <MudStack>
             @foreach (Chat c in chats) {
-                <MudPaper>
+                <MudButton Variant="Variant.Filled" Color="Color.Surface" OnClick="() => {OpenChat(c);}">
                     <MudText Typo="Typo.h6" Align="Align.Center">@c.Name</MudText>
-                </MudPaper>
+                </MudButton>
             }
         </MudStack>
     </MudDrawer>
@@ -37,9 +37,9 @@
                     <MudGrid Justify="Justify.SpaceBetween">
                         @foreach (Class c in classes) {   
                             <MudItem xs="3">
-                                <MudPaper Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="d-flex flex-column align-center justify-center mud-width-full py-8">
                                     <MudText Typo="Typo.h6" Align="Align.Center">@c.Name</MudText>
-                                </MudPaper>
+                                </MudButton>
                             </MudItem>
                         }
                     </MudGrid>
@@ -132,7 +132,8 @@
             await userField.Clear();
             return;
         }
-        var res = await Client.Query($"SELECT * FROM user WHERE Username = {userField.Value.Trim()} LIMIT 1;");
+        
+        var res = await client.Query($"SELECT * FROM user WHERE Username = {userField.Value.Trim()} LIMIT 1;");
         
         var res2 = res.GetValue<List<User>>(0)!.First();
 
@@ -144,8 +145,8 @@
 
     private async Task OnJoinClass()
     {
-        await Client.Query($"UPDATE class WHERE Code = {codeField.Value.Trim()} SET Users += {data.user.Id.DeserializeId<string>()};");
-        var result = await Client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
+        await client.Query($"UPDATE class WHERE Code = {codeField.Value.Trim()} SET Users += {data.user.Id.DeserializeId<string>()};");
+        var result = await client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
         var classes_res = result.GetValue<Class[]>(0);
         if (classes_res is not null) {
             classes = classes_res.ToList();
@@ -159,7 +160,7 @@
         var us = users.Select((x) => x.Id.DeserializeId<string>()!).ToList()!;
         us.Add(data.user.Id.DeserializeId<string>());
 
-        await Client.Create("class", new Class {
+        await client.Create("class", new Class {
             Name = nameField.Value,
             Code = new Random().Next(999999).ToString(),
             Teachers = [data.user.Id.DeserializeId<string>()],
@@ -169,12 +170,20 @@
         await ResetData();
     }
 
+    private async Task OpenChat(Chat chat)
+    {
+        navigationManager.NavigateTo($"/chat/{chat.Id.DeserializeId<String>()}");
+    }
+
     private async Task OnCreateChat()
     {
+        if (users.Count <= 0 ) {
+            return;
+        }
         var us = users.Select((x) => x.Id.DeserializeId<string>()!).ToList()!;
         us.Add(data.user.Id.DeserializeId<string>());
 
-        await Client.Create("chat", new Chat {
+        await client.Create("chat", new Chat {
             Name = nameField.Value,
             Users = us,
         });
@@ -189,57 +198,33 @@
 
     private async Task ResetData()
     { 
-        var result = await Client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
-        var classes_res = result.GetValue<Class[]>(0);
-        if (classes_res is not null) {
-            classes = classes_res.ToList();
-        }
-
-        result = await Client.Query($"SELECT * FROM chat WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
-        var chats_res = result.GetValue<Chat[]>(0);
-        if (chats_res is not null) {
-            chats = chats_res.ToList();
-        }
-
-        for (int i = 0; i < chats.Count; i++ ) {
-            if (chats[i].Name is null) {
-                var other = chats[i].Users.First();
-                if (other == data.user.Id.DeserializeId<string>()) {
-                    other = chats[i].Users[1];
-                }
-                chats[i].Name = other;
-            }
-        }
-
+        await InitData();
         await codeField.Clear();
         await nameField.Clear();
         await userField.Clear();
         users.Clear();
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        Console.WriteLine(data.user.Id.DeserializeId<string>());
-        var result = await Client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
+    private async Task InitData() {
+        var result = await client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
         var classes_res = result.GetValue<Class[]>(0);
         if (classes_res is not null) {
-            classes = new List<Class>(classes_res);
+            classes = classes_res.ToList();
         }
 
-        result = await Client.Query($"SELECT * FROM chat WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
+        result = await client.Query($"SELECT * FROM chat WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
         var chats_res = result.GetValue<Chat[]>(0);
         if (chats_res is not null) {
             chats = chats_res.ToList();
         }
 
         for (int i = 0; i < chats.Count; i++ ) {
-            if (chats[i].Name is null) {
-                var other = chats[i].Users.First();
-                if (other == data.user.Id.DeserializeId<string>()) {
-                    other = chats[i].Users[1];
-                }
-                chats[i].Name = other;
-            }
+            chats[i].Name = await chats[i].GetName(client, data.user.Id.DeserializeId<string>());
         }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitData();
     }
 }

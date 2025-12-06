@@ -2,12 +2,11 @@
 @using System.Text.RegularExpressions
 @using System.ComponentModel.DataAnnotations
 @using Acascendia.Models
-@using Microsoft.AspNetCore.Mvc
 @using SurrealDb.Net
 @using System.Threading.Tasks
-@inject NavigationManager NavigationManager
+@inject NavigationManager navigationManager
 @inject Data data
-@inject SurrealDbClient Client
+@inject SurrealDbClient client
 @rendermode InteractiveServer
 
 <div style="display: flex; justify-content: center;">
@@ -64,26 +63,26 @@
     }
 
     private async Task OnSubmit() {
-        var res = await Client.Query($"SELECT * FROM user WHERE Username = {usernameField.Value} and Password = {pwField1.Value} LIMIT 1;");
+        var res = await client.Query($"SELECT * FROM user WHERE Username = {usernameField.Value} and Password = {pwField1.Value} LIMIT 1;");
 
         var res2 = res.GetValue<List<UserInfo>>(0);
 
         if (res2 is not null) {
             if (res2.Count > 0) {
                 data.UpdateUser(res2.First());
-                NavigationManager.NavigateTo("/");
+                navigationManager.NavigateTo("/");
             }
         }
 
-        data.UpdateUser(await Client.Create("user", new UserInfo {
+        data.UpdateUser(await client.Create("user", new UserInfo {
             Username = usernameField.Value,
             Email = emailField.Value,
             Password = pwField1.Value
         }));
-        NavigationManager.NavigateTo("/");
+        navigationManager.NavigateTo("/");
     }
 
     private void OnLogin() {
-        NavigationManager.NavigateTo("/login");
+        navigationManager.NavigateTo("/login");
     }
 }

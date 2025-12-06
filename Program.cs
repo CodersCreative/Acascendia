@@ -1,7 +1,6 @@
 using Acascendia.Components;
 using MudBlazor.Services;
 using SurrealDb.Net;
-using SurrealDb.Net.Models;
 using Acascendia.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,12 +59,31 @@ DEFINE FIELD IF NOT EXISTS Password ON TABLE user TYPE string;
 DEFINE TABLE IF NOT EXISTS class SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS Name ON TABLE class TYPE string;
 DEFINE FIELD IF NOT EXISTS Code ON TABLE class TYPE string;
-DEFINE FIELD IF NOT EXISTS Users ON TABLE class TYPE Array<string>;
-DEFINE FIELD IF NOT EXISTS Teachers ON TABLE class TYPE Array<string>;
+DEFINE FIELD IF NOT EXISTS Users ON TABLE class TYPE array<string>;
+DEFINE FIELD IF NOT EXISTS Teachers ON TABLE class TYPE array<string>;
 
 DEFINE TABLE IF NOT EXISTS chat SCHEMALESS;
-DEFINE FIELD IF NOT EXISTS Name ON TABLE class TYPE string;
-DEFINE FIELD IF NOT EXISTS Users ON TABLE class TYPE Array<string>;
+DEFINE FIELD IF NOT EXISTS Name ON TABLE class TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS Users ON TABLE class TYPE array<string>;
+
+DEFINE TABLE IF NOT EXISTS message SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS Date ON TABLE message TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS Parent ON TABLE message TYPE string;
+DEFINE FIELD IF NOT EXISTS Text ON TABLE message TYPE string;
+DEFINE FIELD IF NOT EXISTS User ON TABLE message TYPE string;
+
+DEFINE TABLE IF NOT EXISTS assignment SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS Name ON TABLE assignment TYPE string;
+DEFINE FIELD IF NOT EXISTS Due ON TABLE assignment TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS Class ON TABLE assignment TYPE string;
+DEFINE FIELD IF NOT EXISTS Text ON TABLE assignment TYPE string;
+
+DEFINE TABLE IF NOT EXISTS submission SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS Date ON TABLE submission TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS Assignment ON TABLE submission TYPE string;
+DEFINE FIELD IF NOT EXISTS Text ON TABLE submission TYPE string;
+DEFINE FIELD IF NOT EXISTS User ON TABLE submission TYPE string;
+
 """);
 }
 
