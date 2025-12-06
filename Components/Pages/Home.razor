@@ -2,6 +2,7 @@
 @using Acascendia.Models
 @using Microsoft.Extensions.ObjectPool
 @using SurrealDb.Net
+@using SurrealDb.Net.Models
 @inject SurrealDbClient Client
 @inject Data data
 @inject SurrealDbClient Client
@@ -49,11 +50,9 @@
                 <MudTabPanel Text="Classes">
                     <MudText Typo="Typo.h6">Join</MudText>
                     <MudTextField T="string" Label="Code" @ref="codeField" />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;">Join</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnJoinClass">Join</MudButton>
                     <MudText Typo="Typo.h6">Create</MudText>
-                    @if (users.Count > 2) {
-                        <MudTextField T="string" Label="Name" @ref="nameField" />
-                    }
+                    <MudTextField T="string" Label="Name" @ref="nameField" />
                     <div style="display : flex; flex-wrap : nowrap;">
                         <MudTextField T="string" Label="Add Student" @ref="userField" />
                         <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Edge="Edge.Start" OnClick="OnAddUser"/>
@@ -67,11 +66,13 @@
                             </MudPaper>
                         }
                     </MudStack>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;">Create</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnCreateClass">Create</MudButton>
                 </MudTabPanel>
                 <MudTabPanel Text="Chats">
                     <MudText Typo="Typo.h6">Create</MudText>
-                    <MudTextField T="string" Label="Name" @ref="nameField" />
+                    @if (users.Count > 2) {
+                        <MudTextField T="string" Label="Name" @ref="nameField" />
+                    }
                     <div style="display : flex; flex-wrap : nowrap;">
                         <MudTextField T="string" Label="Add User" @ref="userField" />
                         <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Edge="Edge.Start" OnClick="OnAddUser"/>
@@ -85,7 +86,7 @@
                             </MudPaper>
                         }
                     </MudStack>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;">Create</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnCreateChat">Create</MudButton>
                 </MudTabPanel>
             </MudTabs>
 
@@ -98,8 +99,8 @@
 
 
 @code {
-    private Class[] classes = [];
-    private Chat[] chats = [];
+    private List<Class> classes = [];
+    private List<Chat> chats = [];
     private bool left_open = false;
     private Page page = Page.Classes;
     List<User> users = [];
@@ -141,29 +142,100 @@
         }  
     }
 
+    private async Task OnJoinClass()
+    {
+        await Client.Query($"UPDATE class WHERE Code = {codeField.Value.Trim()} SET Users += {data.user.Id.DeserializeId<string>()};");
+        var result = await Client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
+        var classes_res = result.GetValue<Class[]>(0);
+        if (classes_res is not null) {
+            classes = classes_res.ToList();
+        }
+
+        await ResetData();
+    }
+
+    private async Task OnCreateClass()
+    {
+        var us = users.Select((x) => x.Id.DeserializeId<string>()!).ToList()!;
+        us.Add(data.user.Id.DeserializeId<string>());
+
+        await Client.Create("class", new Class {
+            Name = nameField.Value,
+            Code = new Random().Next(999999).ToString(),
+            Teachers = [data.user.Id.DeserializeId<string>()],
+            Users = us,
+        });
+
+        await ResetData();
+    }
+
+    private async Task OnCreateChat()
+    {
+        var us = users.Select((x) => x.Id.DeserializeId<string>()!).ToList()!;
+        us.Add(data.user.Id.DeserializeId<string>());
+
+        await Client.Create("chat", new Chat {
+            Name = nameField.Value,
+            Users = us,
+        });
+
+        await ResetData();
+    }
+
     private void OnRemoveUser(User user)
     {
         users.Remove(user);
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        var result = await Client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.ToString()};");
+    private async Task ResetData()
+    { 
+        var result = await Client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
         var classes_res = result.GetValue<Class[]>(0);
         if (classes_res is not null) {
-            classes = classes_res;
+            classes = classes_res.ToList();
         }
 
-        result = await Client.Query($"SELECT * FROM chat WHERE Users CONTAINS {data.user.Id.ToString()};");
+        result = await Client.Query($"SELECT * FROM chat WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
         var chats_res = result.GetValue<Chat[]>(0);
         if (chats_res is not null) {
-            chats = chats_res;
+            chats = chats_res.ToList();
         }
 
-        for (int i = 0; i < chats.Length; i++ ) {
+        for (int i = 0; i < chats.Count; i++ ) {
             if (chats[i].Name is null) {
                 var other = chats[i].Users.First();
-                if (other == data.user.Id.ToString()) {
+                if (other == data.user.Id.DeserializeId<string>()) {
+                    other = chats[i].Users[1];
+                }
+                chats[i].Name = other;
+            }
+        }
+
+        await codeField.Clear();
+        await nameField.Clear();
+        await userField.Clear();
+        users.Clear();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine(data.user.Id.DeserializeId<string>());
+        var result = await Client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
+        var classes_res = result.GetValue<Class[]>(0);
+        if (classes_res is not null) {
+            classes = new List<Class>(classes_res);
+        }
+
+        result = await Client.Query($"SELECT * FROM chat WHERE Users CONTAINS {data.user.Id.DeserializeId<string>()};");
+        var chats_res = result.GetValue<Chat[]>(0);
+        if (chats_res is not null) {
+            chats = chats_res.ToList();
+        }
+
+        for (int i = 0; i < chats.Count; i++ ) {
+            if (chats[i].Name is null) {
+                var other = chats[i].Users.First();
+                if (other == data.user.Id.DeserializeId<string>()) {
                     other = chats[i].Users[1];
                 }
                 chats[i].Name = other;

@@ -38,11 +38,13 @@
     private async Task OnSubmit() {
         var res = await Client.Query($"SELECT * FROM user WHERE Username = {usernameField.Value} and Password = {pwField1.Value} LIMIT 1;");
         
-        var res2 = res.GetValue<List<UserInfo>>(0)!.First();
+        var res2 = res.GetValue<List<UserInfo>>(0);
 
         if (res2 is not null) {
-            data.UpdateUser(res2);
-            NavigationManager.NavigateTo("/");
+            if (res2.Count > 0) {
+                data.UpdateUser(res2.First());
+                NavigationManager.NavigateTo("/");
+            }
         }        
     }
 
