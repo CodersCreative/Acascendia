@@ -46,6 +46,12 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return res.ToBase();
     }
 
+    public async Task<Chat> UpdateChat(Chat chat)
+    {
+        var res = await dbClient.Update(new DbChat(chat));
+        return res.ToBase();
+    }
+
     public async Task<Class> CreateClass(Class clss)
     {
         clss.code ??= new Random().Next(99999).ToString();

@@ -8,6 +8,7 @@ public interface IAppHubServer
 {
     Task<Message> SendMessage(Message msg);
     Task<Chat> CreateChat(Chat chat);
+    Task<Chat> UpdateChat(Chat chat);
     Task<Class> CreateClass(Class clss);
     Task<Class?> JoinClass(string userId, string code);
     Task ConnectToChat(string parent);

@@ -1,0 +1,283 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Shared.Models
+@using studbud.Client.Widgets
+@inject NavigationManager navigationManager
+@inject IDialogService Dialog
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+
+<!-- Main Chat Grid (Set a fixed height for the remaining area) -->
+<MudGrid Style="height:100%;">
+    <!-- Adjust 180px based on exact height of header and desired spacing -->
+    <!-- Contacts column -->
+    <MudItem xs="12" md="2" Style="height:100%;">
+        <!-- Page Header (Moved out of the grid for cleaner layout) -->
+        <MudText Typo="Typo.h5" Class="mt-4 mb-2" Style="font-weight:bold;">You</MudText>
+        <MudStack Row="true" Class="mb-4">
+            <MudText Typo="Typo.subtitle1" Class="align-self-center">@current_user?.username</MudText>
+        </MudStack>
+        <!-- This inner container must use 100% height and flex column layout -->
+        <div class="d-flex flex-column" style="height: 100%;">
+
+            <!-- Top Section: Contacts List (flex-grow-1 pushes bottom card down) -->
+            <div class="flex-grow-1 overflow-y-auto pr-2">
+                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">Chats</MudText>
+
+                @foreach (var c in chats)
+                {
+
+                    <MudCard Class="@(c.id == chat?.id ? "mb-2 elevation-4" : "mb-2 elevation-0 transparent-card")" Style="border-radius:12px">
+                        <MudButton Variant="Variant.Text"
+                                    Color="@(c.id == chat?.id ? Color.Primary : Color.Default)"
+                                    OnClick="@(()=>LoadChat(c.id))"
+                                    Style="width:100%; text-align:left; margin-bottom:8px; align-items:center; justify-content:flex-start; justify-items:center; align-content:center;">
+                            @c.name
+                        </MudButton>
+                    </MudCard>
+                }
+            </div>
+            <!-- End of Contacts List -->
+            <!-- Bottom Section: This will now be pinned to the bottom -->
+            <MudCard Class="mt-3 pa-2 elevation-4" Style="border-radius:15px">
+                <MudText Typo="Typo.body2" Class="mb-3">Chat with friends and Classmates</MudText>
+
+                <MudSpacer></MudSpacer>
+
+                <br />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Style="border-radius:15px" Size="Size.Small" OnClick="OnCreateChat" FullWidth="true">New Chat</MudButton>
+            </MudCard>
+            <!-- End of Bottom Section -->
+
+        </div>
+    </MudItem>
+
+    <!-- Messages column -->
+    <MudItem xs="12" md="10">
+        <MudPaper Class="d-flex flex-column" Style="border-radius:16px; padding:16px;">
+            <MudStack Row="true">
+                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">
+                    @(chat?.name ?? "Select a chat")
+                </MudText>
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnEditChat"/>
+            </MudStack>
+            <MudDivider />
+            @if (messages is not null && chat is not null){
+                var orderedMessages = messages
+                    .OrderBy(m => m.date)
+                    .ToList();
+
+
+                if (orderedMessages.Count > 0) {
+                    List<List<Message>> orderedGroups = [[orderedMessages[0]]];
+
+                    foreach (var message in orderedMessages.Skip(1)) {
+                        if (orderedGroups.Last().First().userId == message.userId) {
+                            orderedGroups.Last().Add(message);
+                        }else {
+                            orderedGroups.Add([message]);
+                        }
+                    }
+                    <div>
+                        @for (int i = 0; i < orderedGroups.Count; i++)
+                        {
+                            var group = orderedGroups[i];
+                            var frst = group.First().userId;
+                            var usrText = frst is null ? "Loading...." : GetUserText(frst);
+                            var position = usrText == "You" ? ChatBubblePosition.End : ChatBubblePosition.Start;
+
+                            <MudChat ChatPosition="@position">
+                                <MudChatHeader Name="@usrText"/>
+                                @foreach (var message in group.OrderBy(m => m.date))
+                                {
+                                    <MudChatBubble>
+                                        <MudMarkdown Value="@message.text"/>
+                                    </MudChatBubble>
+                                }
+                            </MudChat>
+                        }
+                    </div>
+                }
+                <MudTextField @ref="inputField" T="string" AutoGrow Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnSubmit" AdornmentAriaLabel="Submit" />
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+
+
+@code {
+    [Parameter]
+    public Action<Chat?> OnChatChanged {get; set;} = (x) => {};
+    [Parameter]
+    public Chat? chat {get; set;}
+    private List<Message>? messages = null;
+    private MudTextField<string>? inputField;
+    private HubConnection? hub;
+    private List<User> users = new();
+    private List<Chat> chats = new();
+    private User? current_user;
+    private bool showAddUserPanel = false;
+    private bool showRenamePanel = false;
+    private string addUsername = string.Empty;
+    private string newChatName = string.Empty;
+
+    private string GetUserText(String userId) {
+        if (current_user is not null && userId == current_user.id) {
+            return "You";
+        }  else if (users is null || users.Count <= 0) {
+            return "Loading...";
+        }
+        
+        else {
+            return users?.Where((x) => x.id == userId).First()?.username ?? "Loading...";
+        }
+    }
+
+    private async Task OnSubmit()
+    {
+        if (inputField is null) return;
+        if (string.IsNullOrWhiteSpace(inputField.Value)) return;
+        if (chat is null || hub is null || current_user is null) return;
+
+        var msg = new Message {
+            text = inputField.Value.Trim(),
+            parentId = chat.id,
+            date = DateTime.Now,
+            userId = current_user.id
+        };
+
+        msg = await hub.InvokeAsync<Message>(nameof(IAppHubServer.SendMessage), msg);
+        messages.Add(msg);
+        await inputField.Clear();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        hub = hubService.GetHubConnection().Build();
+
+        hub.On<Message>(nameof(IAppHubClient.ReceiveMessage), (msg) => {
+            if (messages is not null && chat is not null && msg.id == chat.id) {
+                messages.Add(msg);
+                StateHasChanged();
+            }
+        });
+
+        await hub.StartAsync();
+    }
+
+    private async Task LoadChat(string chatId) {
+        if (chatId == chat?.id && messages is not null) {
+            chat = null;
+            messages = null;
+            OnChatChanged(null);
+            return;
+        }
+        chat = await hub!.InvokeAsync<Chat>(nameof(IAppHubServer.GetChatWithName), chatId, current_user.id);
+        OnChatChanged(chat);
+        messages = await hub.InvokeAsync<List<Message>>(nameof(IAppHubServer.GetMessages), chatId);
+        users = await hub!.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), chat.userIds);
+        StateHasChanged();
+    }
+
+    private Task OnCreateChat()
+    {
+        return Dialog.ShowAsync<CreateChatDialog>("", new DialogParameters() {
+            ["OnChatAdded"] = (Chat? chat) => {
+                if (chat is not null) {
+                    chats.Add(chat);
+                }
+                StateHasChanged();
+            }
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (current_user is null) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+            chats = await hub.InvokeAsync<List<Chat>>(nameof(IAppHubServer.GetChatsFromUser), current_user.id);
+
+            if (chat is not null) {
+                if (messages is null) { 
+                    await LoadChat(chat.id);
+                }
+                await hub.SendAsync(nameof(IAppHubServer.ConnectToChat), chat.id);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private Task OnEditChat()
+    {
+        return Dialog.ShowAsync<EditChatDialog>("", new DialogParameters() {
+            ["OnChatChanged"] = (Chat? c) => {
+                if (c is not null) {
+                    chat = c;
+                }
+                StateHasChanged();
+            },
+            ["chat"] = chat
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+
+    }
+
+    private async Task AddUser()
+    {
+        if (string.IsNullOrWhiteSpace(addUsername)) return;
+        if (hub is null || chat is null) return;
+
+        var usr = await hub.InvokeAsync<User?>(nameof(IAppHubServer.GetUserFromUsername), addUsername.Trim());
+        if (usr is null || usr.id is null) return;
+
+        if (users.Contains(usr)) {
+            addUsername = "";
+            return;
+        }
+
+
+
+        var updated = await hub.InvokeAsync<Chat>(nameof(IAppHubServer.AddUserToChat), chat.id, usr.id);
+        chat = updated;
+        if (chat?.userIds is not null)
+        {
+            users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), chat.userIds);
+        }
+        addUsername = string.Empty;
+        showAddUserPanel = false;
+        StateHasChanged();
+    }
+
+    private async Task RenameChat()
+    {
+        if (string.IsNullOrWhiteSpace(newChatName)) return;
+        if (hub is null || chat is null) return;
+
+        var updated = await hub.InvokeAsync<Chat>(nameof(IAppHubServer.SetChatName), chat.id, newChatName.Trim());
+        chat = updated;
+        newChatName = string.Empty;
+        showRenamePanel = false;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
+        }
+    }
+}

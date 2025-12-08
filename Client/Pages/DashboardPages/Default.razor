@@ -1,0 +1,218 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Client.Widgets
+@using studbud.Shared
+@using studbud.Shared.Models
+@inject NavigationManager navigationManager
+@inject IDialogService Dialog
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+
+<MudStack Spacing="5" Class="ml-20 mt-15" Justify="Justify.FlexStart" AlignItems="AlignItems.Center">
+    <MudStack Row="true" Spacing="3">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.School"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnCreateClass">
+            Create Class
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Chat"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnCreateChat">
+            Create Chat
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Quiz"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   Href="/login">
+            Create Quiz
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.MeetingRoom"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnJoinClass">
+            Join Class
+        </MudButton>
+    </MudStack>
+
+
+
+    <MudText Typo="Typo.h5" Style="font-weight: bold;" Class="mt-8">
+        Classes
+    </MudText>
+
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" md="8" lg="8">
+            <MudCard Style="border-radius: 16px; " Elevation="4" Class="p-2">
+                <MudCardContent>
+                    @if (classes.Count <= 0) {
+                        <MudText Typo="Typo.body1" Align="Align.Center">No classes found...</MudText>
+                    } else {
+                        <MudGrid Justify="Justify.SpaceBetween">
+                            @foreach (var c in classes) {   
+                                <MudItem xs="4">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Surface" OnClick="() => {OnOpenClass(c);}" Style="border-radius : 10px;" Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                        <MudText Typo="Typo.h6" Align="Align.Center">@c.name</MudText>
+                                    </MudButton>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                </MudCardContent>
+                
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+
+    <MudText Typo="Typo.h5" Style="font-weight: bold;">
+        Chats
+    </MudText>
+
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" md="8" lg="8">
+            <MudCard Style="border-radius: 16px;  " Elevation="4" Class="p-2">
+                <MudCardContent>
+                    @if (chats.Count <= 0) {
+                        <MudText Typo="Typo.body1" Align="Align.Center">No chats found...</MudText>
+                    } else {
+                        <MudGrid Justify="Justify.SpaceBetween">
+                            @foreach (var c in chats) {   
+                                <MudItem xs="3">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Surface" OnClick="() => {OnOpenChat(c);}" Style="border-radius : 10px;" Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                        <MudText Typo="Typo.h6" Align="Align.Center">@c.name</MudText>
+                                    </MudButton>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudText Typo="Typo.h5" Style="font-weight: bold;">
+        Quizzes
+    </MudText>
+
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" md="8" lg="8">
+            <MudCard Style="border-radius: 16px;" Elevation="4" Class="p-2">
+                <MudCardContent>
+                    @if (chats.Count <= 0) {
+                            <MudText Typo="Typo.body1" Align="Align.Center">No quizzes found...</MudText>
+                    } else {
+                        <MudStack Row="true">
+                        </MudStack>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+</MudStack>
+
+@code {
+    [Parameter]
+    public Action<Class> OnOpenClass {get; set;} = (x) => {};
+    [Parameter]
+    public Action<Chat> OnOpenChat {get; set;} = (x) => {};
+    [Parameter]
+    public Action<Quiz> OnOpenQuiz {get; set;} = (x) => {};
+    private List<Class> classes = [];
+    private List<Chat> chats = [];
+    private HubConnection? hub;
+    private User current_user;
+
+
+
+    private Task OnCreateClass()
+    {
+        return Dialog.ShowAsync<CreateClassDialog>("", new DialogParameters() {
+            ["OnClassAdded"] = (Class? clss) => {
+                if (clss is not null) {
+                    classes.Add(clss);
+                }
+                StateHasChanged();
+            }
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+
+    }
+
+    private Task OnJoinClass()
+    {
+        return Dialog.ShowAsync<JoinClassDialog>("", new DialogParameters() {
+            ["OnClassAdded"] = (Class? clss) => {
+                if (clss is not null) {
+                    classes.Add(clss);
+                }
+                StateHasChanged();
+            }
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+
+    }
+
+    private Task OnCreateChat()
+    {
+        return Dialog.ShowAsync<CreateChatDialog>("", new DialogParameters() {
+            ["OnChatAdded"] = (Chat? chat) => {
+                if (chat is not null) {
+                    chats.Add(chat);
+                }
+                StateHasChanged();
+            }
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+    }
+
+    private async Task InitData() {
+        classes = await hub.InvokeAsync<List<Class>>(nameof(IAppHubServer.GetClassesFromUser), current_user.id);
+        chats = await hub.InvokeAsync<List<Chat>>(nameof(IAppHubServer.GetChatsFromUser), current_user.id);
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (current_user is null || classes is null) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+            await InitData();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
+        }
+    }
+}
