@@ -15,17 +15,33 @@
 		<MudText Typo="Typo.h6">@(clss?.name ?? "Loading...")</MudText>
 		<MudSpacer />
 	</MudAppBar>
-    <MudDrawerContainer Class="mud-height-full">
-        <MudDrawer @bind-Open="@open" Fixed="false" Elevation="1" Variant="@DrawerVariant.Mini" OpenMiniOnHover="true" Breakpoint="Breakpoint.None">
-            <MudNavMenu>
-                <MudNavLink Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-                <MudNavLink Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Chat">Stream</MudNavLink>
-                <MudNavLink Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Assignments</MudNavLink>
-            </MudNavMenu>
-        </MudDrawer>
-        <MudMainContent Style="bottom : 20px; height : auto; position : fixed;" Class="pt-16 px-16">
-            <div>
-                <h4>Stream</h4>
+    <MudMainContent Class="pt-16 px-16">
+        <MudTabs Rounded="true" Centered="true" Style="padding : 50px;">
+            <MudTabPanel Text="Home">
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h5">Class Info</MudText>
+                    <MudDivider Class="my-2" />
+                    <div><b>Code:</b> @(clss?.code ?? "—")</div>
+                </MudPaper>
+
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6">People</MudText>
+                    <MudDivider Class="my-2" />
+                    @if (users is null || users.Count == 0)
+                    {
+                        <div>No members</div>
+                    }
+                    else
+                    {
+                        <MudExpansionPanel Text="@(users.Count.ToString() + " members")" >
+                            @foreach (var u in users) {
+                                <div>@u.username</div>
+                            }
+                        </MudExpansionPanel>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Stream">
                 @if (messages is not null)
                 {
                     foreach (var m in messages.OrderBy(m => m.date))
@@ -34,35 +50,54 @@
                     }
                 }
                 <MudTextField Style="margin-top : 20px;" @ref="inputField" T="string" AutoGrow Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnSubmit" AdornmentAriaLabel="Submit" />
-
-                <h4 style="margin-top:24px;">Assignments</h4>
-                <div>
+            </MudTabPanel>
+            <MudTabPanel Text="Assignments">
+                @if (viewing is not null) {
+                    <MudPaper Class="pa-3 mb-2">
+                        <AssignmentView classId="@classId" assignmentId="@viewing.id"/>
+                        <MudButton OnClick="CloseAssignmentPopUp" Class="ml-auto mr-n3 mb-1" Color="Color.Error">Back</MudButton>
+                    </MudPaper>
+                }else if (creating is not null){
+                    <MudPaper Class="pa-3 mb-2">
+                        <MudTextField Style="margin : 10px;" Label="Name" @bind-Value="creating.name" />
+                        <MudDatePicker Style="margin : 10px;" Label="Due (optional)" @bind-Date="creating.due"/>
+                        <MudTextField Style="margin : 10px;" Label="Description" Lines="8" @bind-Value="creating.text" />
+                        <div style="display : flex; flex-wrap : nowrap; margin : 10px; margin-bottom : 20px;">
+                            <MudButton OnClick="CloseAssignmentPopUp" Class="ml-auto mr-n3 mb-1" Color="Color.Error">Back</MudButton>
+                            <MudSpacer/>
+                            <MudButton OnClick="CreateAssignment" Variant="Variant.Filled" Color="Color.Primary">Create</MudButton>
+                        </div>
+                    </MudPaper>
+                }else {
                     @if (assignments is null || assignments.Count == 0)
                     {
-                        <div>No assignments</div>
+                        <MudPaper Class="pa-3 mb-2">
+                            <div>No assignments</div>
+                            <MudButton OnClick="CreateAssignmentPopUp" Class="ml-auto mr-n3 mb-1" Color="Color.Primary">Create</MudButton>
+                        </MudPaper>
                     }
                     else
                     {
-                        foreach (var a in assignments)
+                        @foreach (var a in assignments)
                         {
-                            <MudPaper Class="pa-3 ma-2">
-                                <div><b>@a.name</b> — due: @(a.due?.ToString("g") ?? "No due date")</div>
-                                <div>@a.text</div>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => ToggleSubmit(a.id)">Submit</MudButton>
-                                @if (showSubmitFor == a.id)
-                                {
-                                    <div class="mt-2">
-                                        <MudTextField @bind-Value="submissionText" Placeholder="Write your submission..." Lines="4" />
-                                        <MudButton OnClick="() => SubmitAssignment(a.id)" Class="mt-2">Send</MudButton>
+                            <MudPaper Class="pa-3 mb-2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
+                                        <b>@a.name</b>
+                                        <div class="text-muted">Due: @(a.due?.ToString("g") ?? "No due date")</div>
                                     </div>
-                                }
+                                    <div>
+                                        <MudButton Variant="Variant.Outlined" OnClick="() => ViewAssignmentPopUp(a)">View</MudButton>
+                                    </div>
+                                </div>
+                                <MudButton OnClick="CreateAssignmentPopUp" Class="ml-auto mr-n3 mb-1" Color="Color.Primary">Create</MudButton>
                             </MudPaper>
                         }
                     }
-                </div>
-            </div>
-        </MudMainContent>
-    </MudDrawerContainer>
+                }
+            </MudTabPanel>
+        </MudTabs>
+    </MudMainContent>
 </MudLayout>
 
 @code {
@@ -78,7 +113,8 @@
 	private List<Assignment> assignments = new();
 	private string? showSubmitFor;
 	private string submissionText = string.Empty;
-    private Page page = Page.Home;
+    private Assignment? viewing = null;
+    private Assignment? creating = null;
 
     enum Page {
         Home,
@@ -114,6 +150,40 @@
 	}
 
 	private void OnBack() => navigationManager.NavigateTo("/dash");
+
+    private void GotoAssignment(string assignment) {
+        navigationManager.NavigateTo($"/class/{classId}/assignments/{assignment}");
+    }
+
+    private void CloseAssignmentPopUp() {
+        viewing = null;
+        creating = null;
+        StateHasChanged();
+    }
+
+    private void CreateAssignmentPopUp() {
+        viewing = null;
+        creating = new Assignment{
+            name = "",classId = classId, due = DateTime.Today, text = ""
+        };
+        StateHasChanged();
+    }
+
+    private async Task CreateAssignment()
+    {
+        if (creating is null) return;
+        var res = await hub.InvokeAsync<Assignment>(nameof(IAppHubServer.CreateAssignment), creating);
+        if (res is not null) {
+            assignments.Add(res);
+        }
+        creating = null;
+    }
+
+    private void ViewAssignmentPopUp(Assignment a) {
+        viewing = a;
+        creating = null;
+        StateHasChanged();
+    }
 
 	protected override async Task OnInitializedAsync()
 	{

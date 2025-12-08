@@ -1,0 +1,101 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Shared.Models
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject NavigationManager navigationManager
+
+<MudPaper Class="pa-4 mb-4">
+    <div><b>Name:</b> @assignment?.name</div>
+    <div><b>Due:</b> @(assignment?.due?.ToString("g") ?? "—")</div>
+    <div class="mt-2">@assignment?.text</div>
+</MudPaper>
+
+@if (!isTeacher)
+{
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h6">Your Submission</MudText>
+        @if (yourSubmission is null)
+        {
+            <div>No submission yet</div>
+        }
+        else
+        {
+            <div>@yourSubmission.text</div>
+            <div class="text-muted">Submitted: @yourSubmission.date</div>
+        }
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h6">Submissions</MudText>
+        @if (submissions is null || submissions.Count == 0)
+        {
+            <div>No submissions</div>
+        }
+        else
+        {
+            @foreach (var s in submissions)
+            {
+                <MudPaper Class="pa-2 mb-2">
+                    <div><b>@GetUserName(s.userId)</b></div>
+                    <div>@s.text</div>
+                    <div class="text-muted">@s.date</div>
+                </MudPaper>
+            }
+        }
+    </MudPaper>
+}
+
+
+@code {
+    [Parameter]
+    public string? classId { get; set; }
+    [Parameter]
+    public string? assignmentId { get; set; }
+
+    private Assignment? assignment;
+    private List<Submission> submissions = new();
+    private HubConnection? hub;
+    private Submission? yourSubmission;
+    private User? current_user;
+    private List<User> users = new();
+    private bool isTeacher = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        var hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+        if (classId is null || assignmentId is null) return;
+
+        current_user = await sessionStorage.GetItemAsync<User>("user");
+        assignment = (await hub.InvokeAsync<List<Assignment>>(nameof(IAppHubServer.GetAssignments), classId)).FirstOrDefault(a => a.id == assignmentId);
+        submissions = await hub.InvokeAsync<List<Submission>>(nameof(IAppHubServer.GetSubmissions), assignmentId);
+        if (current_user is not null)
+        {
+            yourSubmission = submissions.FirstOrDefault(s => s.userId == current_user.id);
+        }
+
+        var clss = await hub.InvokeAsync<Class>(nameof(IAppHubServer.GetClass), classId);
+        if (clss?.teacherIds is not null && current_user is not null)
+        {
+            isTeacher = clss.teacherIds.Contains(current_user.id);
+        }
+
+        if (clss?.userIds is not null)
+        {
+            users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), clss.userIds);
+        }
+    }
+
+    private void Back() {
+        navigationManager.NavigateTo($"/class/{classId}/assignments");
+    }
+
+    private string GetUserName(string? id)
+    {
+        return users.FirstOrDefault(u => u.id == id)?.username ?? id ?? "Unknown";
+    }
+}
