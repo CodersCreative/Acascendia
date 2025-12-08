@@ -14,7 +14,7 @@
         <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
             <MudText Typo="Typo.h5" Class="mb-4">Edit Chat</MudText>
             <MudTextField T="string" Label="Name" bind-Value="@chat.name" />
-            <MudStack>
+            <MudStack Style="overflow:scroll;">
                 @foreach (var u in users) {   
                     <MudPaper style="display : flex; flex-wrap : nowrap; padding: 10px; margin: 10px 0 0 0; vertical-align: middle;">
                         <MudText Typo="Typo.h6" style="text-align: center; vertical-align: middle;">@u.username</MudText>
