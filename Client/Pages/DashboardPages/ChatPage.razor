@@ -11,7 +11,6 @@
 <!-- Main Chat Grid (Set a fixed height for the remaining area) -->
 <MudGrid Style="height:100%;">
     <!-- Adjust 180px based on exact height of header and desired spacing -->
-    <!-- Contacts column -->
     <MudItem xs="12" md="2" Style="height:100%;">
         <!-- Page Header (Moved out of the grid for cleaner layout) -->
         <MudText Typo="Typo.h5" Class="mt-4 mb-2" Style="font-weight:bold;">You</MudText>
@@ -62,7 +61,9 @@
                     @(chat?.name ?? "Select a chat")
                 </MudText>
                 <MudSpacer />
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnEditChat"/>
+                @if (chat is not null) {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnEditChat"/>
+                }
             </MudStack>
             <MudDivider />
             @if (messages is not null && chat is not null){
@@ -120,10 +121,6 @@
     private List<User> users = new();
     private List<Chat> chats = new();
     private User? current_user;
-    private bool showAddUserPanel = false;
-    private bool showRenamePanel = false;
-    private string addUsername = string.Empty;
-    private string newChatName = string.Empty;
 
     private string GetUserText(String userId) {
         if (current_user is not null && userId == current_user.id) {
@@ -234,44 +231,6 @@
             CloseOnEscapeKey = true 
         });
 
-    }
-
-    private async Task AddUser()
-    {
-        if (string.IsNullOrWhiteSpace(addUsername)) return;
-        if (hub is null || chat is null) return;
-
-        var usr = await hub.InvokeAsync<User?>(nameof(IAppHubServer.GetUserFromUsername), addUsername.Trim());
-        if (usr is null || usr.id is null) return;
-
-        if (users.Contains(usr)) {
-            addUsername = "";
-            return;
-        }
-
-
-
-        var updated = await hub.InvokeAsync<Chat>(nameof(IAppHubServer.AddUserToChat), chat.id, usr.id);
-        chat = updated;
-        if (chat?.userIds is not null)
-        {
-            users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), chat.userIds);
-        }
-        addUsername = string.Empty;
-        showAddUserPanel = false;
-        StateHasChanged();
-    }
-
-    private async Task RenameChat()
-    {
-        if (string.IsNullOrWhiteSpace(newChatName)) return;
-        if (hub is null || chat is null) return;
-
-        var updated = await hub.InvokeAsync<Chat>(nameof(IAppHubServer.SetChatName), chat.id, newChatName.Trim());
-        chat = updated;
-        newChatName = string.Empty;
-        showRenamePanel = false;
-        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()

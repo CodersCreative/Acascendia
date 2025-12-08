@@ -1,4 +1,5 @@
 @page "/dash"
+@using studbud.Client.Pages.DashboardPages
 @using studbud.Client.Widgets
 @using studbud.Shared.Models
 @inject NavigationManager navigationManager
@@ -24,10 +25,13 @@
         <MudPaper Class="rounded-xl pa-6 mx-auto" Style="border-radius: 20px 0 0 0; width:100%; height:100%; padding : 20px;">
             @switch (page) {
                 case Page.Home:
-                    <studbud.Client.Pages.DashboardPages.Default OnOpenChat="(x) => {chat = x; SwitchPage(Page.Chat);}" />
+                    <studbud.Client.Pages.DashboardPages.Default OnOpenChat="(x) => {chat = x; SwitchPage(Page.Chat);}" OnOpenClass="(x) => {clss = x; SwitchPage(Page.Class);}" />
                     break;
                 case Page.Chat:
                     <studbud.Client.Pages.DashboardPages.ChatPage chat="chat" OnChatChanged="(x) => {chat = x; StateHasChanged();}"/>
+                    break;
+                case Page.Class:
+                    <studbud.Client.Pages.DashboardPages.ClassPage clss="clss" OnClassChanged="(x) => {clss = x; StateHasChanged();}"/>
                     break;
             }
         </MudPaper>
