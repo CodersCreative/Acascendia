@@ -10,15 +10,13 @@
 @implements IAsyncDisposable
 
 <MudDialog Style="background-color: transparent; box-shadow: none;">
-
    <DialogContent>
-    <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
-        <MudText Typo="Typo.h5" Class="mb-4">Create Class</MudText>
-        <MudTextField T="string" Label="Code" HelperText="Class Code" @ref="codeField" />
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnJoinClass">Join</MudButton>
-    </MudCard>
+        <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
+            <MudText Typo="Typo.h5" Class="mb-4">Create Class</MudText>
+            <MudTextField T="string" Label="Code" HelperText="Class Code" @ref="codeField" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnJoinClass">Join</MudButton>
+        </MudCard>
    </DialogContent>
-
 </MudDialog>
 
 @code {

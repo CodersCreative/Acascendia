@@ -11,6 +11,14 @@
 
 <MudStack Spacing="5" Class="ml-20 mt-15" Justify="Justify.FlexStart" AlignItems="AlignItems.Center">
     <MudStack Row="true" Spacing="3">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Chat"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnAIChat">
+            Chat With Bud
+        </MudButton>
         <MudButton Variant="Variant.Outlined"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.School"
@@ -163,6 +171,16 @@
                 StateHasChanged();
             }
         },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+
+    }
+
+    private Task OnAIChat()
+    {
+        return Dialog.ShowAsync<AIChatDialog>("",new DialogOptions()
         {
 
             CloseOnEscapeKey = true 

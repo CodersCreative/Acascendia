@@ -119,7 +119,9 @@
                     <MudPaper Class="pa-2 ma-2"><div>@GetUserText(m.userId):</div> <MudMarkdown Value="@m.text"/></MudPaper>
                 }
             }
-            <MudTextField Style="margin-top : 20px;" @ref="inputField" T="string" AutoGrow Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnSubmit" AdornmentAriaLabel="Submit" />
+            <MudPaper Style="position:fixed; width : 60%; bottom : 30px; margin-top : 20px;">
+                <MudTextField @ref="inputField" T="string" AutoGrow Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnSubmit" AdornmentAriaLabel="Submit" />
+            </MudPaper>
         </MudTabPanel>
         <MudTabPanel Text="Assignments">
             @if (viewing is not null) {
@@ -221,8 +223,8 @@
 
 	private string GetUserText(string? userId)
 	{
-		if (current_user is null) return "Loading...";
-		if (userId is null) return "Unknown";
+		if (current_user is null || userId is null) return "Loading...";
+        if (userId == "AI") return "Bud AI";
 		if (userId == current_user.id) return "You";
 		var u = users?.FirstOrDefault(x => x.id == userId);
 		return u?.username ?? "Unknown";

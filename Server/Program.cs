@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.ResponseCompression;
 using studbud.Hubs;
+using OllamaSharp;
 using SurrealDb.Net;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,7 +21,6 @@ builder.Services.AddResponseCompression(opts =>
    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
        [ "application/octet-stream" ]);
 });
-
 builder.Services.AddSurreal(surreal);
 
 string? origins = "origins";
@@ -109,3 +109,4 @@ DEFINE FIELD IF NOT EXISTS userId ON TABLE submission TYPE string;
 
 """);
 }
+

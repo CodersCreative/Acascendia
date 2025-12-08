@@ -8,7 +8,12 @@ public interface IAppHubServer
 {
     Task<Message> SendMessage(Message msg);
     Task<Chat> CreateChat(Chat chat);
+    Task<Message?> GetAIResponse(string model, List<Message> messages);
+    Task<Message?> AddAIResponseToChat(string model, string parent);
+    Task<List<string>?> GetAIModels();
+    Task<bool> IsAIAvailable();
     Task<Chat> UpdateChat(Chat chat);
+    Task ResetChat(string parent);
     Task<Class> CreateClass(Class clss);
     Task<Class?> JoinClass(string userId, string code);
     Task ConnectToChat(string parent);

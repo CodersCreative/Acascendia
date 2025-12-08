@@ -5,6 +5,7 @@ using studbud.Shared;
 using System.Reactive.Threading.Tasks;
 using System.Text.Json;
 using SurrealDb.Net.Models;
+using Microsoft.Extensions.AI;
 
 namespace studbud.Hubs;
 
@@ -12,10 +13,12 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 {
     private Dictionary<String, String> connectedChats = new();
     private readonly SurrealDbClient dbClient;
+    private readonly OllamaSharp.OllamaApiClient AIClient;
 
     public AppHub (SurrealDbClient dbClient)
     {
         this.dbClient = dbClient;
+        this.AIClient = new OllamaSharp.OllamaApiClient("http://localhost:11434/");
     }
 
     public override Task OnConnectedAsync()
@@ -110,6 +113,66 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         var res = await dbClient.Select<DbChat>(("chat", chatId));
         return res!.ToBase();
     }
+
+    public Task<bool> IsAIAvailable()
+    {
+        return AIClient.IsRunningAsync();
+    }
+
+    public async Task<List<string>?> GetAIModels()
+    {
+        if (!await IsAIAvailable())
+        {
+            return null;
+        }
+
+        var models = await AIClient.ListLocalModelsAsync();
+        return models.Select((x) => x.Name)?.ToList();
+    }
+
+    public async Task<Message?> GetAIResponse(string model, List<Message> messages)
+    {
+        if (!await IsAIAvailable())
+        {
+            return null;
+        }
+
+        var chat = new OllamaSharp.Chat(AIClient);
+        chat.Model = model;
+        var message = messages.Last();
+        messages.RemoveAt(messages.Count - 1);
+        chat.Messages = messages.Select((x) => new OllamaSharp.Models.Chat.Message(x.userId == "AI" ? OllamaSharp.Models.Chat.ChatRole.Assistant : OllamaSharp.Models.Chat.ChatRole.User, x.text ?? "")).ToList();
+        
+        var res = "";
+        await foreach (var txt in chat.SendAsync(message.text ?? ""))
+        {
+            res += txt;
+        }
+
+        return new Message
+        {
+            userId = "AI",
+            text = res,
+            date = DateTime.Now,
+
+        };
+    }
+
+    public async Task<Message?> AddAIResponseToChat(string model, string parent)
+    {
+        var messages = await GetMessages(parent);
+        var response = await GetAIResponse(model, messages);
+        response.parentId = parent;
+        if (response is null) return null;
+        return await SendMessage(response);
+    }
+
+    public async Task ResetChat(string parent)
+    {
+        await dbClient.Query($"DELETE message WHERE parentId = {parent};");
+    }
+
+    
 
     public async Task<Class> GetClass(string id)
     {
@@ -340,9 +403,14 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
         List<User> users = [];
         foreach (var id in ids) {
-            users.Add(
-                (await dbClient.Select<DbUser>(("user", id)))!.ToBase()
-            );
+            if (id == "AI")
+            {
+                users.Add(new User{username = "AI", email = "ai@studbud.ai", id = "AI"});
+            }else {
+                users.Add(
+                    (await dbClient.Select<DbUser>(("user", id)))!.ToBase()
+                );
+            }
         }
         return users;
     }
@@ -423,6 +491,20 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         }
 
         var usr = await dbClient.Create("user", new DbUserInfo(user));
-        return usr.ToBase().ToBase();
+        var ret_user = usr.ToBase().ToBase();
+
+        if (ret_user is not null) {
+            await CreateChat(new Chat
+            {
+                userIds = [ret_user.id, "AI"],
+                name = "AI",
+            });
+            await CreateChat(new Chat
+            {
+                userIds = [ret_user.id],
+                name = "You",
+            });
+        }
+        return ret_user;
     }
 }

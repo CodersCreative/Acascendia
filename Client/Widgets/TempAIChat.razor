@@ -1,0 +1,132 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Shared.Models
+@inject NavigationManager navigationManager
+@inject IDialogService Dialog
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+
+@{
+    var orderedMessages = messages
+                        .OrderBy(m => m.date)
+                        .ToList();
+
+    <div style="overflow: scroll; padding-bottom: 125px;">
+        @if (orderedMessages.Count > 0) {
+            List<List<Message>> orderedGroups = [[orderedMessages[0]]];
+
+            foreach (var message in orderedMessages.Skip(1)) {
+                if (orderedGroups.Last().First().userId == message.userId) {
+                    orderedGroups.Last().Add(message);
+                }else {
+                    orderedGroups.Add([message]);
+                }
+            }
+            
+            @for (int i = 0; i < orderedGroups.Count; i++)
+            {
+                var group = orderedGroups[i];
+                var frst = group.First().userId;
+                var usrText = frst is null ? "Loading...." : (frst == "AI" ? "Bud AI" : "You");
+                var position = usrText == "You" ? ChatBubblePosition.End : ChatBubblePosition.Start;
+
+                <MudChat ChatPosition="@position">
+                    <MudChatHeader Name="@usrText"/>
+                    @foreach (var message in group.OrderBy(m => m.date))
+                    {
+                        var (content, think) = SplitThink(message.text ?? "");
+                        
+                        <MudChatBubble>
+                            <MudMarkdown Value="@content"/>
+                            @if (think is not null && think.Trim().Count() > 0) {
+                                <MudExpansionPanel HideIcon="true" Text="Thinking" Style="font-size : 2px; padding : 5px; margin : 0px;">
+                                    <MudMarkdown Value="@think"/>
+                                </MudExpansionPanel>
+                            }
+                        </MudChatBubble>
+                    }
+                </MudChat>
+            }
+        } else if (ChildContent is not null){
+            @ChildContent
+        }
+    </div>
+    <MudPaper Style="position:fixed; bottom : 30px; left : 50px; right : 50px;">
+        @if (models is not null) {
+            <MudSelect @bind-Value="model" Variant="Variant.Outlined" Margin="Margin.Dense" Label="AI Model">
+                @foreach (var m in models)
+                {
+                    <MudSelectItem Value="m">@m</MudSelectItem>
+                }
+            </MudSelect>
+        }
+        <MudTextField @ref="inputField" T="string" AutoGrow Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnSubmit" AdornmentAriaLabel="Submit" />
+    </MudPaper>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+    private List<Message> messages = [];
+    private List<string>? models = null;
+    private string? model = null;
+    private MudTextField<string>? inputField;
+    private HubConnection? hub;
+    private User? current_user;
+
+    private (string, string?) SplitThink(String text) {
+        if (!(text.Contains("<think>") && text.Contains("</think>"))) return (text, null);
+
+        var split = text.Split("<think>");
+
+        var content = split[0];
+        split = split[1].Split("</think>");
+        content += split[1];
+        return (content, split[0]);
+    }
+
+    private async Task OnSubmit()
+    {
+        if (inputField is null || hub is null) return;
+        if (string.IsNullOrWhiteSpace(inputField.Value)) return;
+
+        messages.Add(new Message {
+            text = inputField.Value.Trim(),
+            date = DateTime.Now,
+            userId = current_user.id
+        });
+        await inputField.Clear();
+
+        var msg = await hub.InvokeAsync<Message?>(nameof(IAppHubServer.GetAIResponse), "qwen3:0.6b", messages);
+        if (msg is not null) {
+            messages.Add(msg);
+        }    
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+        models = await hub.InvokeAsync<List<string>>(nameof(IAppHubServer.GetAIModels));
+        model = models[0];
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (current_user is null) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
+        }
+    }
+}
+

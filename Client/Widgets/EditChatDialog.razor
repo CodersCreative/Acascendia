@@ -10,28 +10,26 @@
 @implements IAsyncDisposable
 
 <MudDialog Style="background-color: transparent; box-shadow: none;">
-
    <DialogContent>
-    <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
-        <MudText Typo="Typo.h5" Class="mb-4">Edit Chat</MudText>
-        <MudTextField T="string" Label="Name" bind-Value="@chat.name" />
-        <MudStack>
-            @foreach (var u in users) {   
-                <MudPaper style="display : flex; flex-wrap : nowrap; padding: 10px; margin: 10px 0 0 0; vertical-align: middle;">
-                    <MudText Typo="Typo.h6" style="text-align: center; vertical-align: middle;">@u.username</MudText>
-                    <MudSpacer></MudSpacer>
-                    <MudIconButton Icon="@Icons.Material.Filled.Remove" OnClick="() => {OnRemoveUser(u);}" Color="Color.Inherit" Edge="Edge.Start" style="vertical-align: middle;"/>
-                </MudPaper>
-            }
-        </MudStack>
-        <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-11">
-            <MudTextField T="string" Label="Add User" HelperText="Add User" @ref="userField" />
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Edge="Edge.Start" OnClick="OnAddUser"/>
-        </MudStack>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnSubmit">Save</MudButton>
-    </MudCard>
+        <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
+            <MudText Typo="Typo.h5" Class="mb-4">Edit Chat</MudText>
+            <MudTextField T="string" Label="Name" bind-Value="@chat.name" />
+            <MudStack>
+                @foreach (var u in users) {   
+                    <MudPaper style="display : flex; flex-wrap : nowrap; padding: 10px; margin: 10px 0 0 0; vertical-align: middle;">
+                        <MudText Typo="Typo.h6" style="text-align: center; vertical-align: middle;">@u.username</MudText>
+                        <MudSpacer></MudSpacer>
+                        <MudIconButton Icon="@Icons.Material.Filled.Remove" OnClick="() => {OnRemoveUser(u);}" Color="Color.Inherit" Edge="Edge.Start" style="vertical-align: middle;"/>
+                    </MudPaper>
+                }
+            </MudStack>
+            <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-11">
+                <MudTextField T="string" Label="Add User" HelperText="Add User" @ref="userField" />
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Edge="Edge.Start" OnClick="OnAddUser"/>
+            </MudStack>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnSubmit">Save</MudButton>
+        </MudCard>
    </DialogContent>
-
 </MudDialog>
 
 @code {
