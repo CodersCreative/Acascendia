@@ -16,9 +16,27 @@ public class Question
 {
     public string? quizId {get; set;}
     public string? text {get; set;}
-    public List<string>? answers {get; set;}
-    public int? correct {get; set;}
+    public List<Answer>? answers {get; set;}
     public string? id {get; set;}
     public Question()
     {}
+}
+
+public class Answer
+{
+    public string? text {get; set;}
+    public bool? isCorrect {get; set;}
+    public Answer()
+    {}
+}
+
+public class QuizSubmission
+{
+    public string? quizId { get; set; }
+    public string? userId { get; set; }
+    public List<int?>? answers { get; set; }
+    public DateTime? date { get; set; }
+    public int? score { get; set; }
+    public string? id { get; set; }
+    public QuizSubmission() {}
 }

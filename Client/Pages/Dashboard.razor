@@ -41,6 +41,11 @@
                                 </MudButton>
                             </MudItem>
                         }
+                            <MudItem xs="3">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OpenQuizCreate" Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                    <MudText Typo="Typo.h6" Align="Align.Center">Create Quiz</MudText>
+                                </MudButton>
+                            </MudItem>
                     </MudGrid>
                 </MudItem>
             </MudGrid>
@@ -210,6 +215,11 @@
         classes = await hub.InvokeAsync<List<Class>>(nameof(IAppHubServer.GetClassesFromUser), current_user.id);
         chats = await hub.InvokeAsync<List<Chat>>(nameof(IAppHubServer.GetChatsFromUser), current_user.id);
         StateHasChanged();
+    }
+
+    private void OpenQuizCreate()
+    {
+        navigationManager.NavigateTo("/quiz/new");
     }
 
     protected override async Task OnInitializedAsync()

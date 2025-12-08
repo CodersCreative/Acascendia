@@ -209,6 +209,57 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         }
     }
 
+    public async Task<Quiz> CreateQuiz(Quiz quiz)
+    {
+        var res = await dbClient.Create("quiz", new DbQuiz(quiz));
+        return res.ToBase();
+    }
+
+    public async Task<Question> CreateQuestion(Question q)
+    {
+        var res = await dbClient.Create("question", new DbQuestion(q));
+        return res.ToBase();
+    }
+
+    public async Task<Quiz> GetQuiz(string quizId)
+    {
+        var res = await dbClient.Select<DbQuiz>(("quiz", quizId));
+        return res!.ToBase();
+    }
+
+    public async Task<List<Question>> GetQuestions(string quizId)
+    {
+        var result = await dbClient.Query($"SELECT * FROM question WHERE quizId = {quizId} ORDER BY id ASC;");
+        var arr = result.GetValue<List<DbQuestion>>(0);
+        if (arr is not null) {
+            return arr.Select(x => x.ToBase()).ToList();
+        } else {
+            return new List<Question>();
+        }
+    }
+
+    public async Task<QuizSubmission> SubmitQuiz(QuizSubmission sub)
+    {
+        if (sub.id is not null) {
+            var updated = await dbClient.Update(new DbQuizSubmission(sub));
+            return updated.ToBase();
+        } else {
+            var res = await dbClient.Create("quizsubmission", new DbQuizSubmission(sub));
+            return res.ToBase();
+        }
+    }
+
+    public async Task<List<QuizSubmission>> GetQuizSubmissions(string quizId)
+    {
+        var result = await dbClient.Query($"SELECT * FROM quizsubmission WHERE quizId = {quizId} ORDER BY date ASC;");
+        var arr = result.GetValue<List<DbQuizSubmission>>(0);
+        if (arr is not null) {
+            return arr.Select(x => x.ToBase()).ToList();
+        } else {
+            return new List<QuizSubmission>();
+        }
+    }
+
     public async Task<List<Class>> GetClassesFromUser(string id)
     {
         var result = await dbClient.Query($"SELECT * FROM class WHERE userIds CONTAINS {id} OR teacherIds CONTAINS {id};");

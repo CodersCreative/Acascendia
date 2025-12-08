@@ -37,8 +37,7 @@ public class DbQuestion : Record
 {
     public string? quizId {get; set;}
     public string? text {get; set;}
-    public List<string>? answers {get; set;}
-    public int? correct {get; set;}
+    public List<Answer>? answers {get; set;}
 
     public DbQuestion()
     {}
@@ -48,7 +47,6 @@ public class DbQuestion : Record
         this.quizId = que.quizId;
         this.text = que.text;
         this.answers = que.answers;
-        this.correct = que.correct;
         if (que.id is not null) {
             this.Id = new RecordIdOfString("question", que.id);
         }
@@ -60,7 +58,41 @@ public class DbQuestion : Record
             quizId = this.quizId,
             answers = this.answers,
             text = this.text,
-            correct = this.correct,
+            id = this.Id?.DeserializeId<string>()
+        };
+    }
+}
+
+public class DbQuizSubmission : Record
+{
+    public string? quizId { get; set; }
+    public string? userId { get; set; }
+    public List<int?>? answers { get; set; }
+    public DateTime? date { get; set; }
+    public int? score { get; set; }
+
+    public DbQuizSubmission() { }
+
+    public DbQuizSubmission(QuizSubmission sub)
+    {
+        this.quizId = sub.quizId;
+        this.userId = sub.userId;
+        this.answers = sub.answers;
+        this.date = sub.date;
+        this.score = sub.score;
+        if (sub.id is not null) {
+            this.Id = new RecordIdOfString("quizsubmission", sub.id);
+        }
+    }
+
+    public QuizSubmission ToBase()
+    {
+        return new QuizSubmission {
+            quizId = this.quizId,
+            userId = this.userId,
+            answers = this.answers,
+            date = this.date,
+            score = this.score,
             id = this.Id?.DeserializeId<string>()
         };
     }

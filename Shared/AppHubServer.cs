@@ -26,6 +26,12 @@ public interface IAppHubServer
     Task<List<Assignment>> GetAssignments(string classId);
     Task<Submission> SubmitAssignment(Submission sub);
     Task<List<Submission>> GetSubmissions(string assignmentId);
+    Task<Quiz> CreateQuiz(Quiz quiz);
+    Task<Quiz> GetQuiz(string quizId);
+    Task<Question> CreateQuestion(Question q);
+    Task<List<Question>> GetQuestions(string quizId);
+    Task<QuizSubmission> SubmitQuiz(QuizSubmission sub);
+    Task<List<QuizSubmission>> GetQuizSubmissions(string quizId);
     Task<Submission> SetSubmissionMark(string submissionId, int mark);
     Task<List<Class>> GetClassesFromUser(string id);
     Task<List<Chat>> GetChatsFromUser(string id);
