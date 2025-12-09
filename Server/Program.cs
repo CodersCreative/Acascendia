@@ -1,38 +1,38 @@
 ﻿using Microsoft.AspNetCore.ResponseCompression;
-using studbud.Hubs;
 using OllamaSharp;
+using studbud.Hubs;
 using SurrealDb.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var surreal =
-SurrealDbOptions
-  .Create()
-  .WithEndpoint("http://127.0.0.1:8000")
-  .WithNamespace("main")
-  .WithDatabase("main")
-  .Build();
+var surreal = SurrealDbOptions
+    .Create()
+    .WithEndpoint("http://127.0.0.1:8000")
+    .WithNamespace("main")
+    .WithDatabase("main")
+    .Build();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 builder.Services.AddResponseCompression(opts =>
 {
-   opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
-       [ "application/octet-stream" ]);
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/octet-stream"]);
 });
 builder.Services.AddSurreal(surreal);
 
 string? origins = "origins";
 builder.Services.AddCors(options =>
 {
-     options.AddPolicy(origins,
-                           policy =>
-                           {
-                                policy.AllowAnyHeader();
-                                policy.AllowAnyMethod();
-                                policy.AllowAnyOrigin();
-                           });
+    options.AddPolicy(
+        origins,
+        policy =>
+        {
+            policy.AllowAnyHeader();
+            policy.AllowAnyMethod();
+            policy.AllowAnyOrigin();
+        }
+    );
 });
 
 var app = builder.Build();
@@ -73,7 +73,8 @@ async Task InitializeDbAsync()
 
 async Task DefineSchemaAsync(ISurrealDbClient surrealDbClient)
 {
-    await surrealDbClient.RawQuery("""
+    await surrealDbClient.RawQuery(
+        """
 DEFINE TABLE IF NOT EXISTS user SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS username ON TABLE user TYPE string;
 DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string;
@@ -117,6 +118,6 @@ DEFINE ANALYZER quiz_analyzer TOKENIZERS class, blank FILTERS lowercase, ascii;
 DEFINE INDEX name_index ON TABLE quiz COLUMNS name SEARCH ANALYZER quiz_analyzer BM25;
 DEFINE INDEX desc_index ON TABLE quiz COLUMNS description SEARCH ANALYZER quiz_analyzer BM25;
 DEFINE INDEX code_index ON TABLE quiz COLUMNS code SEARCH ANALYZER quiz_analyzer BM25;
-""");
+"""
+    );
 }
-

@@ -1,11 +1,11 @@
-using Microsoft.AspNetCore.SignalR;
-using SurrealDb.Net;
-using studbud.Shared.Models;
-using studbud.Shared;
 using System.Reactive.Threading.Tasks;
 using System.Text.Json;
-using SurrealDb.Net.Models;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using studbud.Shared;
+using studbud.Shared.Models;
+using SurrealDb.Net;
+using SurrealDb.Net.Models;
 
 namespace studbud.Hubs;
 
@@ -15,7 +15,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     private readonly SurrealDbClient dbClient;
     private readonly OllamaSharp.OllamaApiClient AIClient;
 
-    public AppHub (SurrealDbClient dbClient)
+    public AppHub(SurrealDbClient dbClient)
     {
         this.dbClient = dbClient;
         this.AIClient = new OllamaSharp.OllamaApiClient("http://localhost:11434/");
@@ -58,14 +58,16 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<Class> CreateClass(Class clss)
     {
         clss.code ??= new Random().Next(99999).ToString();
-        
+
         var res = await dbClient.Create("class", new DbClass(clss));
         return res.ToBase();
     }
 
     public async Task<Class?> JoinClass(string userId, string code)
     {
-        var result = await dbClient.Query($"UPDATE class WHERE code = {code} SET userIds += {userId};");        
+        var result = await dbClient.Query(
+            $"UPDATE class WHERE code = {code} SET userIds += {userId};"
+        );
         return result?.GetValue<List<DbClass>>(0)?.First()?.ToBase();
     }
 
@@ -76,11 +78,15 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<List<Message>> GetMessages(string parent)
     {
-        var result = await dbClient.Query($"SELECT * FROM message WHERE parentId = {parent} ORDER BY Date ASC;");
+        var result = await dbClient.Query(
+            $"SELECT * FROM message WHERE parentId = {parent} ORDER BY Date ASC;"
+        );
         var messages_res = result.GetValue<List<DbMessage>>(0);
-        if (messages_res is not null) {
+        if (messages_res is not null)
+        {
             return messages_res.Select((x) => x.ToBase()).ToList();
-        } else
+        }
+        else
         {
             return [];
         }
@@ -130,8 +136,10 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return models.Select((x) => x.Name)?.ToList();
     }
 
-    private (string, string?) SplitThink(String text) {
-        if (!(text.Contains("<think>") && text.Contains("</think>"))) return (text, null);
+    private (string, string?) SplitThink(String text)
+    {
+        if (!(text.Contains("<think>") && text.Contains("</think>")))
+            return (text, null);
 
         var split = text.Split("<think>");
 
@@ -152,8 +160,18 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         chat.Model = model;
         var message = messages.Last();
         messages.RemoveAt(messages.Count - 1);
-        chat.Messages = messages.Select((x) => new OllamaSharp.Models.Chat.Message(x.userId == "AI" ? OllamaSharp.Models.Chat.ChatRole.Assistant : OllamaSharp.Models.Chat.ChatRole.User, SplitThink(x.text ?? "").Item1)).ToList();
-        
+        chat.Messages = messages
+            .Select(
+                (x) =>
+                    new OllamaSharp.Models.Chat.Message(
+                        x.userId == "AI"
+                            ? OllamaSharp.Models.Chat.ChatRole.Assistant
+                            : OllamaSharp.Models.Chat.ChatRole.User,
+                        SplitThink(x.text ?? "").Item1
+                    )
+            )
+            .ToList();
+
         var res = "";
         await foreach (var txt in chat.SendAsync(message.text ?? ""))
         {
@@ -165,7 +183,6 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
             userId = "AI",
             text = res,
             date = DateTime.Now,
-
         };
     }
 
@@ -174,7 +191,8 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         var messages = await GetMessages(parent);
         var response = await GetAIResponse(model, messages);
         response.parentId = parent;
-        if (response is null) return null;
+        if (response is null)
+            return null;
         return await SendMessage(response);
     }
 
@@ -182,8 +200,6 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
         await dbClient.Query($"DELETE message WHERE parentId = {parent};");
     }
-
-    
 
     public async Task<Class> GetClass(string id)
     {
@@ -194,8 +210,10 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<Class> UpdateClassInfo(string classId, string? name, string? description)
     {
         var updates = new List<string>();
-        if (name is not null) updates.Add($"name = '{name}'");
-        if (description is not null) updates.Add($"description = '{description}'");
+        if (name is not null)
+            updates.Add($"name = '{name}'");
+        if (description is not null)
+            updates.Add($"description = '{description}'");
         if (updates.Count > 0)
         {
             var upd = string.Join(", ", updates);
@@ -224,7 +242,9 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<Class> AddPinnedLink(string classId, PinnedLink link)
     {
         RecordId id = ("class", classId);
-        await dbClient.Query($"UPDATE {id} SET pinnedLinks += {new { title = link.title, url = link.url, code = link.code ?? System.Guid.NewGuid().ToString() }};");
+        await dbClient.Query(
+            $"UPDATE {id} SET pinnedLinks += {new { title = link.title, url = link.url, code = link.code ?? System.Guid.NewGuid().ToString() }};"
+        );
         var res = await dbClient.Select<DbClass>(("class", classId));
         return res!.ToBase();
     }
@@ -232,7 +252,9 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<Class> RemovePinnedLink(string classId, string linkId)
     {
         RecordId id = ("class", classId);
-        await dbClient.Query($"UPDATE {id} SET pinnedLinks = array::filter(pinnedLinks, (v) -> v.id != {linkId});");
+        await dbClient.Query(
+            $"UPDATE {id} SET pinnedLinks = array::filter(pinnedLinks, (v) -> v.id != {linkId});"
+        );
         var res = await dbClient.Select<DbClass>(("class", classId));
         return res!.ToBase();
     }
@@ -245,21 +267,29 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<List<Assignment>> GetAssignments(string classId)
     {
-        var result = await dbClient.Query($"SELECT * FROM assignment WHERE classId = {classId} ORDER BY due ASC;");
+        var result = await dbClient.Query(
+            $"SELECT * FROM assignment WHERE classId = {classId} ORDER BY due ASC;"
+        );
         var arr = result.GetValue<List<DbAssignment>>(0);
-        if (arr is not null) {
+        if (arr is not null)
+        {
             return arr.Select(x => x.ToBase()).ToList();
-        } else {
+        }
+        else
+        {
             return new List<Assignment>();
         }
     }
 
     public async Task<Submission> SubmitAssignment(Submission sub)
     {
-        if (sub.id is not null) {
+        if (sub.id is not null)
+        {
             DbSubmission result = await dbClient.Update(new DbSubmission(sub));
             return result.ToBase();
-        } else {
+        }
+        else
+        {
             var res = await dbClient.Create("submission", new DbSubmission(sub));
             return res.ToBase();
         }
@@ -270,9 +300,12 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         RecordId id = ("submission", submissionId);
         var result = await dbClient.Query($"UPDATE {id} SET mark = {mark};");
         var arr = result.GetValue<List<DbSubmission>>(0);
-        if (arr is not null && arr.Count > 0) {
+        if (arr is not null && arr.Count > 0)
+        {
             return arr.First().ToBase();
-        } else {
+        }
+        else
+        {
             var sel = await dbClient.Select<DbSubmission>(("submission", submissionId));
             return sel!.ToBase();
         }
@@ -280,11 +313,16 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<List<Submission>> GetSubmissions(string assignmentId)
     {
-        var result = await dbClient.Query($"SELECT * FROM submission WHERE assignmentId = {assignmentId} ORDER BY date ASC;");
+        var result = await dbClient.Query(
+            $"SELECT * FROM submission WHERE assignmentId = {assignmentId} ORDER BY date ASC;"
+        );
         var arr = result.GetValue<List<DbSubmission>>(0);
-        if (arr is not null) {
+        if (arr is not null)
+        {
             return arr.Select(x => x.ToBase()).ToList();
-        } else {
+        }
+        else
+        {
             return new List<Submission>();
         }
     }
@@ -309,11 +347,16 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<List<Question>> GetQuestions(string quizId)
     {
-        var result = await dbClient.Query($"SELECT * FROM question WHERE quizId = {quizId} ORDER BY id ASC;");
+        var result = await dbClient.Query(
+            $"SELECT * FROM question WHERE quizId = {quizId} ORDER BY id ASC;"
+        );
         var arr = result.GetValue<List<DbQuestion>>(0);
-        if (arr is not null) {
+        if (arr is not null)
+        {
             return arr.Select(x => x.ToBase()).ToList();
-        } else {
+        }
+        else
+        {
             return new List<Question>();
         }
     }
@@ -321,31 +364,46 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<QuizSubmission> SubmitQuiz(QuizSubmission sub)
     {
         int score = 0;
-        if (sub.quizId is not null) {
-            var qres = await dbClient.Query($"SELECT * FROM question WHERE quizId = {sub.quizId} ORDER BY id ASC;");
+        if (sub.quizId is not null)
+        {
+            var qres = await dbClient.Query(
+                $"SELECT * FROM question WHERE quizId = {sub.quizId} ORDER BY id ASC;"
+            );
             var qarr = qres.GetValue<List<DbQuestion>>(0);
-            if (qarr is not null && sub.answers is not null) {
+            if (qarr is not null && sub.answers is not null)
+            {
                 var questions = qarr.Select(x => x.ToBase()).ToList();
-                for (int i = 0; i < questions.Count && i < sub.answers.Count; i++) {
+                for (int i = 0; i < questions.Count && i < sub.answers.Count; i++)
+                {
                     var q = questions[i];
                     int? correctIndex = null;
-                    if (q.answers is not null) {
-                        for (int ai = 0; ai < q.answers.Count; ai++) {
+                    if (q.answers is not null)
+                    {
+                        for (int ai = 0; ai < q.answers.Count; ai++)
+                        {
                             var ans = q.answers[ai];
-                            if (ans is not null && ans.isCorrect == true) { correctIndex = ai; break; }
+                            if (ans is not null && ans.isCorrect == true)
+                            {
+                                correctIndex = ai;
+                                break;
+                            }
                         }
                     }
                     var given = sub.answers[i];
-                    if (correctIndex is not null && given is not null && correctIndex == given) score++;
+                    if (correctIndex is not null && given is not null && correctIndex == given)
+                        score++;
                 }
             }
         }
         sub.score = score;
 
-        if (sub.id is not null) {
+        if (sub.id is not null)
+        {
             var updated = await dbClient.Update(new DbQuizSubmission(sub));
             return updated.ToBase();
-        } else {
+        }
+        else
+        {
             var res = await dbClient.Create("quizsubmission", new DbQuizSubmission(sub));
             return res.ToBase();
         }
@@ -353,22 +411,31 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<List<QuizSubmission>> GetQuizSubmissions(string quizId)
     {
-        var result = await dbClient.Query($"SELECT * FROM quizsubmission WHERE quizId = {quizId} ORDER BY date ASC;");
+        var result = await dbClient.Query(
+            $"SELECT * FROM quizsubmission WHERE quizId = {quizId} ORDER BY date ASC;"
+        );
         var arr = result.GetValue<List<DbQuizSubmission>>(0);
-        if (arr is not null) {
+        if (arr is not null)
+        {
             return arr.Select(x => x.ToBase()).ToList();
-        } else {
+        }
+        else
+        {
             return new List<QuizSubmission>();
         }
     }
 
     public async Task<List<Class>> GetClassesFromUser(string id)
     {
-        var result = await dbClient.Query($"SELECT * FROM class WHERE userIds CONTAINS {id} OR teacherIds CONTAINS {id};");
+        var result = await dbClient.Query(
+            $"SELECT * FROM class WHERE userIds CONTAINS {id} OR teacherIds CONTAINS {id};"
+        );
         var classes = result.GetValue<List<DbClass>>(0);
-        if (classes is not null) {
+        if (classes is not null)
+        {
             return classes.Select((x) => x.ToBase()).ToList();
-        } else
+        }
+        else
         {
             return [];
         }
@@ -378,14 +445,16 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
         var result = await dbClient.Query($"SELECT * FROM chat WHERE userIds CONTAINS {id};");
         var chats = result.GetValue<List<DbChat>>(0);
-        if (chats is not null) {
+        if (chats is not null)
+        {
             var chts = chats.Select((x) => x.ToBase()).ToList();
             for (int i = 0; i < chts.Count; i++)
             {
                 chts[i].name = await GetChatNameInternal(chts[i], id);
             }
             return chts;
-        }else
+        }
+        else
         {
             return [];
         }
@@ -395,9 +464,11 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
         var result = await dbClient.Query($"SELECT * FROM quiz WHERE userId = {id};");
         var classes = result.GetValue<List<DbQuiz>>(0);
-        if (classes is not null) {
+        if (classes is not null)
+        {
             return classes.Select((x) => x.ToBase()).ToList();
-        } else
+        }
+        else
         {
             return [];
         }
@@ -405,11 +476,15 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<List<Quiz>> SearchQuizzes(string search)
     {
-        var result = await dbClient.Query($"SELECT *, search::score(1) + search::score(2) + search::score(3) * 1.5 AS score FROM quiz WHERE name @1@ {search} or description @2@ {search} or code @3@ {search} ORDER BY score DESC;");
+        var result = await dbClient.Query(
+            $"SELECT *, search::score(1) + search::score(2) + search::score(3) * 1.5 AS score FROM quiz WHERE name @1@ {search} or description @2@ {search} or code @3@ {search} ORDER BY score DESC;"
+        );
         var classes = result.GetValue<List<DbQuiz>>(0);
-        if (classes is not null) {
+        if (classes is not null)
+        {
             return classes.Select((x) => x.ToBase()).ToList();
-        } else
+        }
+        else
         {
             return [];
         }
@@ -428,7 +503,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return res!.ToBase();
     }
 
-        public async Task<User?> CheckUser(string id)
+    public async Task<User?> CheckUser(string id)
     {
         var res = await dbClient.Select<DbUser>(("user", id));
         return res?.ToBase();
@@ -437,14 +512,22 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<List<User>> GetUsers(List<string> ids)
     {
         List<User> users = [];
-        foreach (var id in ids) {
+        foreach (var id in ids)
+        {
             if (id == "AI")
             {
-                users.Add(new User{username = "AI", email = "ai@studbud.ai", id = "AI"});
-            }else {
                 users.Add(
-                    (await dbClient.Select<DbUser>(("user", id)))!.ToBase()
+                    new User
+                    {
+                        username = "AI",
+                        email = "ai@studbud.ai",
+                        id = "AI",
+                    }
                 );
+            }
+            else
+            {
+                users.Add((await dbClient.Select<DbUser>(("user", id)))!.ToBase());
             }
         }
         return users;
@@ -491,12 +574,16 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<User?> SignIn(string username, string password)
     {
-        var res = await dbClient.Query($"SELECT * FROM user WHERE username = {username} and password = {password} LIMIT 1;");
+        var res = await dbClient.Query(
+            $"SELECT * FROM user WHERE username = {username} and password = {password} LIMIT 1;"
+        );
 
         var res2 = res.GetValue<List<DbUser>>(0);
 
-        if (res2 is not null) {
-            if (res2.Count > 0) {
+        if (res2 is not null)
+        {
+            if (res2.Count > 0)
+            {
                 return res2.First().ToBase();
             }
         }
@@ -506,12 +593,16 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<User?> SignUp(UserInfo user)
     {
-        var res = await dbClient.Query($"SELECT * FROM user WHERE username = {user.username} and password = {user.password} LIMIT 1;");
+        var res = await dbClient.Query(
+            $"SELECT * FROM user WHERE username = {user.username} and password = {user.password} LIMIT 1;"
+        );
 
         var res2 = res.GetValue<List<DbUser>>(0);
 
-        if (res2 is not null) {
-            if (res2.Count > 0) {
+        if (res2 is not null)
+        {
+            if (res2.Count > 0)
+            {
                 return res2.First().ToBase();
             }
         }
@@ -519,8 +610,10 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         res = await dbClient.Query($"SELECT * FROM user WHERE username = {user.username};");
         res2 = res.GetValue<List<DbUser>>(0);
 
-        if (res2 is not null) {
-            if (res2.Count > 0){
+        if (res2 is not null)
+        {
+            if (res2.Count > 0)
+            {
                 return null;
             }
         }
@@ -528,17 +621,10 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         var usr = await dbClient.Create("user", new DbUserInfo(user));
         var ret_user = usr.ToBase().ToBase();
 
-        if (ret_user is not null) {
-            await CreateChat(new Chat
-            {
-                userIds = [ret_user.id, "AI"],
-                name = "AI",
-            });
-            await CreateChat(new Chat
-            {
-                userIds = [ret_user.id],
-                name = "You",
-            });
+        if (ret_user is not null)
+        {
+            await CreateChat(new Chat { userIds = [ret_user.id, "AI"], name = "AI" });
+            await CreateChat(new Chat { userIds = [ret_user.id], name = "You" });
         }
         return ret_user;
     }
