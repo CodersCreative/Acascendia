@@ -43,7 +43,7 @@
     {
 
         await base.OnAfterRenderAsync(firstRender);
-        if (await hubService.AutoLogin(hub, sessionStorage) is not null) {
+        if (await hubService.AutoLogin(hub) is not null) {
             navigationManager.NavigateTo("/dash");
         }
     }

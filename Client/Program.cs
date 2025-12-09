@@ -18,5 +18,5 @@ builder.Services.AddScoped(sp => new HttpClient
 builder.Services.AddBlazoredSessionStorage();
 builder.Services.AddMudServices();
 builder.Services.AddMudMarkdownServices();
-builder.Services.AddSingleton<HubService>();
+builder.Services.AddScoped<HubService>();
 await builder.Build().RunAsync();

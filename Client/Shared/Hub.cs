@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using studbud.Shared;
 using studbud.Shared.Models;
@@ -7,11 +8,19 @@ namespace studbud.Client.Shared;
 
 public class HubService
 {
+    Blazored.SessionStorage.ISessionStorageService sessionStorage;
+    NavigationManager navManager;
+
+    public HubService (Blazored.SessionStorage.ISessionStorageService sessionStorage, NavigationManager navManager)
+    {
+        this.sessionStorage = sessionStorage;
+        this.navManager = navManager;
+    }
     public IHubConnectionBuilder GetHubConnection()
     {
         return new HubConnectionBuilder()
             .WithAutomaticReconnect()
-            .WithUrl("http://localhost:5001/apphub")
+            .WithUrl(navManager.ToAbsoluteUri("/apphub"))
             .AddJsonProtocol(cfg =>
             {
                 var jsonOptions = new System.Text.Json.JsonSerializerOptions
@@ -24,10 +33,7 @@ public class HubService
             });
     }
 
-    public async Task<User?> AutoLogin(
-        HubConnection hub,
-        Blazored.SessionStorage.ISessionStorageService sessionStorage
-    )
+    public async Task<User?> AutoLogin(HubConnection hub)
     {
         var user = await sessionStorage.GetItemAsync<User>("user");
         if (user is not null)
