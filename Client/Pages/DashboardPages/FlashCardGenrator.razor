@@ -2,6 +2,8 @@
 @inject ISnackbar Snackbar
 @inject HttpClient Http
 @layout Layout.RootLayout
+@inject IDialogService Dialog
+@inherits LayoutComponentBase
 
 <MudText Typo="Typo.h3" Class="mb-12 mt-20" Color="Color.Primary" Align="Align.Center">
     AI FlashCards Generator
@@ -61,57 +63,66 @@
     Create simple and beautiful cards with AI. You can make single or double sided cards
 </MudText>
 
-<MudTabs Rounded="true" RoundedSize="Medium" Elevation="2" Class="mt-6">
+<MudGrid Justify="Justify.Center" Class="mt-10">
+    <MudItem xs="12" md="8" lg="8">
+        <MudCard Style="border-radius: 16px;  " Elevation="4" Class="p-2">
 
-    <!-- Tab 1: Type Notes -->
-    <MudTabPanel Text="Type Notes">
-        <MudTextField @bind-Value="UserNotes"
-                      Lines="8"
-                      Placeholder="Type your notes here..."
-                      FullWidth="true"
-                      Margin="Margin.Dense" />
-        <MudButton Color="Color.Primary"
-                   Class="mt-4"
-                   OnClick="GenerateFromTextAsync"
-                   Variant="Variant.Filled">
-            Generate Flashcards
-        </MudButton>
-    </MudTabPanel>
+            <MudCardContent>
+                <MudTabs Rounded="true" RoundedSize="Medium" Elevation="2" Class="mt-6">
 
-    <!-- Tab 2: Upload File -->
-    <MudTabPanel Text="Upload File">
-        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                       @ref="_fileUpload"
-                       OnFilesChanged="OnInputFileChanged"
-                       AppendMultipleFiles
-                       InputClass="file-upload-input"
-                       Hidden="false">
-            <ActivatorContent>
-                <MudPaper Height="200px" Outlined="true" Class="@_dragClass">
-                    <MudText Typo="Typo.h6">
-                        Drag and drop files here or click
-                    </MudText>
-                    @foreach (var file in _fileNames)
-                    {
-                        <MudChip T="string" Color="Color.Dark" Text="@file" tabindex="-1" />
-                    }
-                </MudPaper>
-            </ActivatorContent>
-        </MudFileUpload>
+                    <!-- Tab 1: Type Notes -->
+                    <MudTabPanel Text="Type Notes">
+                        <MudTextField @bind-Value="UserNotes"
+                                      Lines="8"
+                                      Placeholder="Type your notes here..."
+                                      FullWidth="true"
+                                      Margin="Margin.Dense" />
+                        <MudButton Color="Color.Primary"
+                                   Class="mt-4"
+                                   OnClick="GenerateFromTextAsync"
+                                   Variant="Variant.Filled">
+                            Generate Flashcards
+                        </MudButton>
+                    </MudTabPanel>
 
-        <MudToolBar Gutters="false" Class="relative d-flex justify-end gap-4 mt-2">
-            <MudButton Color="Color.Primary" OnClick="OpenFilePickerAsync" Variant="Variant.Filled">
-                Open file picker
-            </MudButton>
-            <MudButton Color="Color.Primary" Disabled="@(!_fileNames.Any())" OnClick="UploadAsync" Variant="Variant.Filled">
-                Upload & Generate
-            </MudButton>
-            <MudButton Color="Color.Error" Disabled="@(!_fileNames.Any())" OnClick="ClearAsync" Variant="Variant.Filled">
-                Clear
-            </MudButton>
-        </MudToolBar>
-    </MudTabPanel>
-</MudTabs>
+                    <!-- Tab 2: Upload File -->
+                    <MudTabPanel Text="Upload File">
+                        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                                       @ref="_fileUpload"
+                                       OnFilesChanged="OnInputFileChanged"
+                                       AppendMultipleFiles
+                                       InputClass="file-upload-input"
+                                       Hidden="false">
+                            <ActivatorContent>
+                                <MudPaper Height="200px" Outlined="true" Class="@_dragClass">
+                                    <MudText Typo="Typo.h6">
+                                        Drag and drop files here or click
+                                    </MudText>
+                                    @foreach (var file in _fileNames)
+                                    {
+                                        <MudChip T="string" Color="Color.Dark" Text="@file" tabindex="-1" />
+                                    }
+                                </MudPaper>
+                            </ActivatorContent>
+                        </MudFileUpload>
+
+                        <MudToolBar Gutters="false" Class="relative d-flex justify-end gap-4 mt-2">
+                            <MudButton Color="Color.Primary" OnClick="OpenFilePickerAsync" Variant="Variant.Filled">
+                                Open file picker
+                            </MudButton>
+                            <MudButton Color="Color.Primary" Disabled="@(!_fileNames.Any())" OnClick="UploadAsync" Variant="Variant.Filled">
+                                Upload & Generate
+                            </MudButton>
+                            <MudButton Color="Color.Error" Disabled="@(!_fileNames.Any())" OnClick="ClearAsync" Variant="Variant.Filled">
+                                Clear
+                            </MudButton>
+                        </MudToolBar>
+                    </MudTabPanel>
+                </MudTabs>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
 
 @if (Flashcards.Any())
 {
@@ -142,9 +153,17 @@
 
     private async Task GenerateFromTextAsync()
     {
+        // Show the progress dialog
+        var dialogReference = Dialog.Show<Widgets.CreatingCards>("", new DialogOptions
+        {
+            CloseOnEscapeKey = false,
+            BackdropClick = false
+        });
+
         if (string.IsNullOrWhiteSpace(UserNotes))
         {
             Snackbar.Add("Please enter some notes.", Severity.Warning);
+            dialogReference.Close(); // close immediately since nothing to process
             return;
         }
 
@@ -168,6 +187,11 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            // Always close the dialog when done
+            dialogReference.Close();
         }
     }
 
