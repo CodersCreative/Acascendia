@@ -86,6 +86,7 @@
         var user = await hub.InvokeAsync<User?>(nameof(IAppHubServer.SignUp), new UserInfo {
             username = usernameField.Value.Trim(),
             email = emailField.Value.Trim(),
+            money = 0.0f,
             password = pwField1.Value
         });
 

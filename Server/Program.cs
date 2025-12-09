@@ -99,6 +99,7 @@ async Task DefineSchemaAsync(ISurrealDbClient surrealDbClient)
         """
 DEFINE TABLE IF NOT EXISTS user SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS username ON TABLE user TYPE string;
+DEFINE FIELD IF NOT EXISTS money ON TABLE user TYPE float;
 DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string;
 DEFINE FIELD IF NOT EXISTS password ON TABLE user TYPE string;
 

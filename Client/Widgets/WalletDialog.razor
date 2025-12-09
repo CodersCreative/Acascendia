@@ -13,26 +13,43 @@
    <DialogContent>
         <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
             <MudText Typo="Typo.h5" Class="mb-4">Your Wallet</MudText>
-            <MudTextField T="float" Label="Code" HelperText="Class Code" @ref="moneyField" />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnAddMoney">Join</MudButton>
+            @if (current_user is null) {
+                <MudText Typo="Typo.h6" Class="mb-4">Not Signed-In</MudText>
+                <MudButton Variant="Variant.Outlined" OnClick="OnLogin" Color="Color.Warning" FullWidth="true" >Login</MudButton>
+            }else{
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudIconButton Icon="@Icons.Material.Filled.Money" OnClick="() => {allowDev = !allowDev; StateHasChanged();}" Variant="Variant.Text" Color="Color.Primary" Edge="Edge.Start"/>
+                    <MudText Color="Color.Primary" Typo="Typo.h6">@(current_user.money ?? 0)</MudText>
+                </MudStack>
+                @if (allowDev) {
+                    <MudTextField T="float" Label="Money" HelperText="Add Money" @ref="moneyField" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Add" OnAdornmentClick="OnAddMoney" AdornmentAriaLabel="Add Money" />
+                }
+                <MudDivider/>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnAddMoney">Add</MudButton>
+                
+            }
         </MudCard>
    </DialogContent>
 </MudDialog>
 
 @code {
     [Parameter]
-    public Action<User?> OnUserUpdated {get; set;}
+    public Action<User?> OnUserUpdated {get; set;} = (x) => {};
     private HubConnection? hub;
     private User current_user;
     MudTextField<float> moneyField;
+    private bool allowDev = false;
 
     private async Task OnAddMoney()
     {
-        if (moneyField is null ) {
-            return;
-        }
+        if (moneyField is null || current_user is null ) return;
+        
         var user = await hub.InvokeAsync<User?>(nameof(IAppHubServer.AddMoneyToUser), current_user.id, moneyField.Value);
-        OnUserUpdated(user);
+        if (user is not null) {
+            current_user = user;
+            await sessionStorage.SetItemAsync("user", user);
+            OnUserUpdated(user);
+        }
         StateHasChanged();
     }
 
@@ -50,6 +67,13 @@
         }
     }
 
+    private Task OnLogin() {
+        return Dialog.ShowAsync<LoginDialog>("",new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+    }
 
     public async ValueTask DisposeAsync()
     {

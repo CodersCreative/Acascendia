@@ -40,7 +40,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         RecordId id = ("user", userId);
         await dbClient.Query($"UPDATE {id} SET money += {amt};");
         var res = await dbClient.Select<DbUser>(id);
-        return res!.ToBase();
+        return res?.ToBase();
     }
 
     public async Task<Message> SendMessage(Message msg)
