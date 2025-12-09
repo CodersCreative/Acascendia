@@ -9,43 +9,50 @@
 @layout MinLayout
 
 <MudPaper Class="d-flex flex-column" Style="border-radius:16px; padding:16px;">
-    <MudStack Row="true">
-        <MudTextField Label="Quiz Name" @bind-Value="quiz?.name" />
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.End" />
-        <MudIconButton OnClick="SaveQuiz" Icon="@Icons.Material.Filled.Save" Color="Color.Inherit" Edge="Edge.End" />
-    </MudStack>
-    <MudDivider/>
-    <MudTextField AutoGrow Lines="6" Label="Quiz Description" @bind-Value="quiz.description" />
-    <MudStack Row="true">
-        <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="RemoveQuestion" Variant="Variant.Outlined" Color="Color.Warning" Class="ml-auto"/>
-        <MudSpacer/>
-        <MudPagination Variant="Variant.Outlined" Count="@(questions.Count)" @bind-Selected="@editing"/>
-        <MudSpacer/>
-        <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="AddDraftQuestion" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"/>
-    </MudStack>
-    @if (questions.Count >= editing) {
-        <MudTextField AutoGrow Lines="6" Label="Question" HelperText="Enter a question" @bind-Value="questions[getEditing()].text" />
+    <MudStack Spacing="2">
         <MudStack Row="true">
-            <MudText Typo="Typo.h6">Answers</MudText>
-            <MudSpacer/>
-            <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="AddQuestionAnswer" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"/>
+            <MudTextField Label="Quiz Name" @bind-Value="quiz?.name" />
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.End" />
+            <MudIconButton OnClick="SaveQuiz" Icon="@Icons.Material.Filled.Save" Color="Color.Inherit" Edge="Edge.End" />
         </MudStack>
-        <MudStack>
-            @if (questions[getEditing()].answers.Count > 0) {
-                for (var i = 0; i < questions[getEditing()].answers?.Count; i++)
-                {
-                    <MudPaper Class="pa-2 ma-2">
-                        <MudStack Row="true">
-                            <MudCheckBox @bind-Value="questions[getEditing()].answers[i].isCorrect"></MudCheckBox>
-                            <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="() => RemoveQuestionAnswer(i)" Variant="Variant.Outlined" Color="Color.Warning" Class="ml-auto"/>
-                        </MudStack>
-                        <MudTextField AutoGrow Lines="6" Label="Answer" @bind-Value="questions[getEditing()].answers[i].text" />    
-                    </MudPaper>
+        <MudDivider/>
+        <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mt-8">
+            Description
+        </MudText>
+        <MarkdownEditor @bind-Value="quiz.description" />
+        <MudDivider/>
+            <MudStack Row="true">
+                <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="RemoveQuestion" Variant="Variant.Outlined" Color="Color.Warning" Class="ml-auto"/>
+                <MudSpacer/>
+                <MudPagination Variant="Variant.Outlined" Count="@(questions.Count)" @bind-Selected="@editing"/>
+                <MudSpacer/>
+                <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="AddDraftQuestion" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"/>
+            </MudStack>
+        <MudDivider/>
+        @if (questions.Count >= editing) {
+            <MudTextField AutoGrow Lines="6" Label="Question" HelperText="Enter a question" @bind-Value="questions[getEditing()].text" />
+            <MudStack Row="true">
+                <MudText Typo="Typo.h6">Answers</MudText>
+                <MudSpacer/>
+                <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="AddQuestionAnswer" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"/>
+            </MudStack>
+            <MudStack>
+                @if (questions[getEditing()].answers.Count > 0) {
+                    for (var i = 0; i < questions[getEditing()].answers?.Count; i++)
+                    {
+                        <MudPaper Class="pa-2 ma-2">
+                            <MudStack Row="true">
+                                <MudCheckBox @bind-Value="questions[getEditing()].answers[i].isCorrect"></MudCheckBox>
+                                <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="() => RemoveQuestionAnswer(i)" Variant="Variant.Outlined" Color="Color.Warning" Class="ml-auto"/>
+                            </MudStack>
+                            <MudTextField AutoGrow Lines="6" Label="Answer" @bind-Value="questions[getEditing()].answers[i].text" />    
+                        </MudPaper>
+                    }
                 }
-            }
-        </MudStack>
-    }
+            </MudStack>
+        }
+    </MudStack>
 </MudPaper>
 
 @code {

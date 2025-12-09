@@ -9,37 +9,36 @@
 @layout MinLayout
 
 <MudPaper Class="d-flex flex-column" Style="border-radius:16px; padding:16px;">
-    <MudStack Row="true">
-        <MudTextField Label="Flashcard Name" @bind-Value="flashcard?.name" />
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.End" />
-        <MudIconButton OnClick="SaveFlashcard" Icon="@Icons.Material.Filled.Save" Color="Color.Inherit" Edge="Edge.End" />
-    </MudStack>
-    <MudDivider/>
-    <MudTextField AutoGrow Lines="6" Label="Flashcard Description" @bind-Value="flashcard.description" />
-    <MudStack Row="true">
-        <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="RemoveQuestion" Variant="Variant.Outlined" Color="Color.Warning" Class="ml-auto"/>
-        <MudSpacer/>
-        <MudPagination Variant="Variant.Outlined" Count="@(cards.Count)" SelectedChanged="async (x) => {editing = x; await InvokeAsync(StateHasChanged); await Task.Yield();}" Selected="@editing"/>
-        <MudSpacer/>
-        <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="AddDraftCard" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"/>
-    </MudStack>
-    @if (cards.Count >= editing && editing >= 1) {
-        <MudStack Row="true" AlignItems="AlignItems.Center">
-            <MudSpacer/>
-            <MudStack>
-                <MudText Typo="Typo.h6">Front</MudText>
-                <MarkdownEditor Value="@cards[getEditing()].front"/>
-            </MudStack>
-            <MudStack>
-                <MudText Typo="Typo.h6">Back</MudText>
-                <MarkdownEditor Value="@cards[getEditing()].back"/>
-            </MudStack>
-            <MudSpacer/>
+    <MudStack Spacing="2">
+        <MudStack Row="true">
+            <MudTextField Label="Flashcard Name" @bind-Value="flashcard?.name" />
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.End" />
+            <MudIconButton OnClick="SaveFlashcard" Icon="@Icons.Material.Filled.Save" Color="Color.Inherit" Edge="Edge.End" />
         </MudStack>
-    } else {
-        <div>Out of bounds</div>
-    }
+        <MudDivider/>
+        <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mt-8">
+            Description
+        </MudText>
+        <MarkdownEditor @bind-Value="flashcard.description" />
+        <MudDivider/>
+            <MudStack Row="true">
+                <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="RemoveQuestion" Variant="Variant.Outlined" Color="Color.Warning" Class="ml-auto"/>
+                <MudSpacer/>
+                <MudPagination Variant="Variant.Outlined" Count="@(cards.Count)" @bind-Selected="editing"/>
+                <MudSpacer/>
+                <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="AddDraftCard" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"/>
+            </MudStack>
+        <MudDivider/>
+        @if (cards.Count >= editing && editing >= 1) {
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudTextField Label="Front" HelperText="Front Text" FullWidth="true" Variant="Variant.Outlined" Lines="8" @bind-Value="@cards[getEditing()].front"/>
+                <MudTextField Label="Back" HelperText="Back Text" FullWidth="true" Variant="Variant.Outlined" Lines="8" @bind-Value="@cards[getEditing()].back"/>
+            </MudStack>
+        } else {
+            <div>Out of bounds</div>
+        }
+    </MudStack>
 </MudPaper>
 
 @code {
