@@ -16,7 +16,7 @@ public class DbQuiz : Record
     public DbQuiz(Quiz quiz)
     {
         this.name = quiz.name;
-        this.published = quiz.published;
+        this.published = quiz.published ?? false;
         this.description = quiz.description;
         this.userId = quiz.userId;
         this.code = quiz.code;
@@ -32,7 +32,7 @@ public class DbQuiz : Record
         {
             name = this.name,
             description = this.description,
-            published = this.published,
+            published = this.published ?? false,
             userId = this.userId,
             code = this.code,
             id = this.Id?.DeserializeId<string>(),

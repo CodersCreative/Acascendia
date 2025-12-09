@@ -397,6 +397,57 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         }
     }
 
+    public async Task<Flashcard> CreateFlashcard(Flashcard flash)
+    {
+        var res = await dbClient.Create("flashcard", new DbFlashcard(flash));
+        return res.ToBase();
+    }
+
+    public async Task<Flashcard> UpdateFlashcard(Flashcard flash)
+    {
+        var res = await dbClient.Update(new DbFlashcard(flash));
+        return res.ToBase();
+    }
+
+    public async Task<Flashcard> GetFlashcard(string flashId)
+    {
+        var res = await dbClient.Select<DbFlashcard>(("flashcard", flashId));
+        return res?.ToBase();
+    }
+
+    public async Task<FlashcardCard> CreateFlashcardCard(FlashcardCard card)
+    {
+        var res = await dbClient.Create("flashcard_card", new DbFlashcardCard(card));
+        return res.ToBase();
+    }
+
+    public async Task<FlashcardCard> UpdateFlashcardCard(FlashcardCard card)
+    {
+        var res = await dbClient.Update(new DbFlashcardCard(card));
+        return res.ToBase();
+    }
+
+    public async Task RemoveFlashcardCard(string cardId)
+    {
+        await dbClient.Delete(("flashcard_card", cardId));
+    }
+
+    public async Task<List<FlashcardCard>> GetFlashcardCards(string flashId)
+    {
+        var result = await dbClient.Query(
+            $"SELECT * FROM flashcard_card WHERE flashcardId = {flashId} ORDER BY id ASC;"
+        );
+        var arr = result.GetValue<List<DbFlashcardCard>>(0);
+        if (arr is not null)
+        {
+            return arr.Select(x => x.ToBase()).ToList();
+        }
+        else
+        {
+            return new List<FlashcardCard>();
+        }
+    }
+
     public async Task<Quiz> CreateQuiz(Quiz quiz)
     {
         var res = await dbClient.Create("quiz", new DbQuiz(quiz));
@@ -550,10 +601,24 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<List<Quiz>> GetQuizzesFromUser(string id)
     {
         var result = await dbClient.Query($"SELECT * FROM quiz WHERE userId = {id};");
-        var classes = result.GetValue<List<DbQuiz>>(0);
-        if (classes is not null)
+        var quizzes = result.GetValue<List<DbQuiz>>(0);
+        if (quizzes is not null)
         {
-            return classes.Select((x) => x.ToBase()).ToList();
+            return quizzes.Select((x) => x.ToBase()).ToList();
+        }
+        else
+        {
+            return [];
+        }
+    }
+
+    public async Task<List<Flashcard>> GetFlashcardsFromUser(string id)
+    {
+        var result = await dbClient.Query($"SELECT * FROM flashcard WHERE userId = {id};");
+        var flashcards = result.GetValue<List<DbFlashcard>>(0);
+        if (flashcards is not null)
+        {
+            return flashcards.Select((x) => x.ToBase()).ToList();
         }
         else
         {
@@ -563,18 +628,56 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<List<Quiz>> SearchQuizzes(string search)
     {
+        List<DbQuiz> quizzes = [];
+
+        if (search.Trim().Any()) {
+            var res = await dbClient.Query(
+                $"SELECT *, search::score(1) + search::score(2) + search::score(3) * 1.5 AS score FROM quiz WHERE name @1@ {search} or description @2@ {search} or code @3@ {search} ORDER BY score DESC;"
+            );
+            quizzes = res.GetValue<List<DbQuiz>>(0);
+            if (quizzes is not null && quizzes.Any())
+            {
+                return quizzes.Select((x) => x.ToBase()).ToList();
+            }
+        }
+            
         var result = await dbClient.Query(
-            $"SELECT *, search::score(1) + search::score(2) + search::score(3) * 1.5 AS score FROM quiz WHERE name @1@ {search} or description @2@ {search} or code @3@ {search} ORDER BY score DESC;"
+            $"SELECT * FROM quiz LIMIT 20;"
         );
-        var classes = result.GetValue<List<DbQuiz>>(0);
-        if (classes is not null)
+        quizzes = result.GetValue<List<DbQuiz>>(0);
+        if (quizzes is not null)
         {
-            return classes.Select((x) => x.ToBase()).ToList();
+            return quizzes.Select((x) => x.ToBase()).ToList();
         }
-        else
+            
+        return [];
+    }
+
+    public async Task<List<Flashcard>> SearchFlashcards(string search)
+    {
+        List<DbFlashcard> flashcards = [];
+
+        if (search.Trim().Any()) {
+            var res = await dbClient.Query(
+                $"SELECT *, search::score(1) + search::score(2) + search::score(3) * 1.5 AS score FROM flashcard WHERE name @1@ {search} or description @2@ {search} or code @3@ {search} ORDER BY score DESC;"
+            );
+            flashcards = res.GetValue<List<DbFlashcard>>(0);
+            if (flashcards is not null && flashcards.Any())
+            {
+                return flashcards.Select((x) => x.ToBase()).ToList();
+            }
+        }
+
+        var result = await dbClient.Query(
+            $"SELECT * FROM flashcard LIMIT 20;"
+        );
+        flashcards = result.GetValue<List<DbFlashcard>>(0);
+        if (flashcards is not null)
         {
-            return [];
+            return flashcards.Select((x) => x.ToBase()).ToList();
         }
+            
+        return [];
     }
 
     public async Task<Chat> GetChatWithName(string chatId, string userId)

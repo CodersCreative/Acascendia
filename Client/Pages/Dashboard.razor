@@ -18,6 +18,7 @@
                 <MudNavLink IconColor="@(page == Page.Chat ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Chat)" Icon="@Icons.Material.Filled.Chat">Chat</MudNavLink>
                 <MudNavLink IconColor="@(page == Page.Class ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Class)" Icon="@Icons.Material.Filled.School">Class</MudNavLink>
                 <MudNavLink IconColor="@(page == Page.Quiz ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Quiz)" Icon="@Icons.Material.Filled.Quiz">Quiz</MudNavLink>
+                <MudNavLink IconColor="@(page == Page.Flashcard ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Flashcard)" Icon="@Icons.Material.Filled.ViewCarousel">Flashcard</MudNavLink>
             </MudNavMenu>
         </MudNavMenu>
     </MudDrawer>
@@ -25,7 +26,14 @@
         <MudPaper Class="rounded-xl pa-6 mx-auto" Style="border-radius: 20px 0 0 0; width:100%; height:100%; padding : 20px;">
             @switch (page) {
                 case Page.Home:
-                    <studbud.Client.Pages.DashboardPages.Default OnOpenChat="(x) => {chat = x; SwitchPage(Page.Chat);}" OnOpenQuiz="(x) => {quiz = x; editingQuiz = true; SwitchPage(Page.Quiz);}" OnCreateQuiz="() => {quiz = null; editingQuiz=true; SwitchPage(Page.Quiz);}" OnOpenClass="(x) => {clss = x; SwitchPage(Page.Class);}" />
+                    <studbud.Client.Pages.DashboardPages.Default 
+                        OnOpenClass="(x) => {clss = x; SwitchPage(Page.Class);}" 
+                        OnOpenChat="(x) => {chat = x; SwitchPage(Page.Chat);}" 
+                        OnOpenQuiz="(x) => {quiz = x; editingQuiz = true; SwitchPage(Page.Quiz);}" 
+                        OnCreateQuiz="() => {quiz = null; editingQuiz=true; SwitchPage(Page.Quiz);}" 
+                        OnOpenFlashcard="(x) => {flashcard = x; editingFlashcard = true; SwitchPage(Page.Flashcard);}" 
+                        OnCreateFlashcard="() => {flashcard = null; editingFlashcard=true; SwitchPage(Page.Flashcard);}" 
+                    />
                     break;
                 case Page.Chat:
                     <studbud.Client.Pages.DashboardPages.ChatPage chat="chat" OnChatChanged="(x) => {chat = x; StateHasChanged();}"/>
@@ -35,6 +43,9 @@
                     break;
                 case Page.Quiz:
                     <studbud.Client.Pages.DashboardPages.QuizPage quiz="quiz" editing="@(editingQuiz ?? false)" OnQuizChanged="(x, y) => {quiz = x; editingQuiz = y; StateHasChanged();}"/>
+                    break;
+                case Page.Flashcard:
+                    <studbud.Client.Pages.DashboardPages.FlashcardPage flashcard="flashcard" editing="@(editingFlashcard ?? false)" OnFlashcardChanged="(x, y) => {flashcard = x; editingFlashcard = y; StateHasChanged();}"/>
                     break;
             }
         </MudPaper>
@@ -57,12 +68,15 @@
     private Chat? chat;
     private Quiz? quiz;
     private bool? editingQuiz;
+    private Flashcard? flashcard;
+    private bool? editingFlashcard;
 
     enum Page {
         Home,
         Class,
         Chat,
-        Quiz
+        Quiz,
+        Flashcard,
     }
 
     private void DrawerToggle()

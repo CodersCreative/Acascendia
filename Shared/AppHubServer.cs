@@ -34,6 +34,16 @@ public interface IAppHubServer
     Task<List<Assignment>> GetAssignments(string classId);
     Task<Submission> SubmitAssignment(Submission sub);
     Task<List<Submission>> GetSubmissions(string assignmentId);
+
+    Task<Flashcard> CreateFlashcard(Flashcard flash);
+    Task<Flashcard> UpdateFlashcard(Flashcard flash);
+    Task<Flashcard> GetFlashcard(string flashId);
+    Task<FlashcardCard> CreateFlashcardCard(FlashcardCard card);
+    Task<FlashcardCard> UpdateFlashcardCard(FlashcardCard card);
+    Task RemoveFlashcardCard(string cardId);
+    Task<List<FlashcardCard>> GetFlashcardCards(string flashId);
+
+
     Task<Quiz> CreateQuiz(Quiz quiz);
     Task<Quiz> UpdateQuiz(Quiz quiz);
     Task<Quiz> GetQuiz(string quizId);
@@ -41,13 +51,16 @@ public interface IAppHubServer
     Task<Question> UpdateQuestion(Question q);
     Task RemoveQuestion(string questionId);
     Task<List<Question>> GetQuestions(string quizId);
+    
     Task<QuizSubmission> SubmitQuiz(QuizSubmission sub);
     Task<List<QuizSubmission>> GetQuizSubmissions(string quizId);
     Task<Submission> SetSubmissionMark(string submissionId, int mark);
     Task<List<Class>> GetClassesFromUser(string id);
     Task<List<Chat>> GetChatsFromUser(string id);
     Task<List<Quiz>> GetQuizzesFromUser(string id);
+    Task<List<Flashcard>> GetFlashcardsFromUser(string id);
     Task<List<Quiz>> SearchQuizzes(string search);
+    Task<List<Flashcard>> SearchFlashcards(string search);
     Task<Chat> GetChatWithName(string chatId, string userId);
     Task<User> GetUser(string id);
     Task<User?> CheckUser(string id);

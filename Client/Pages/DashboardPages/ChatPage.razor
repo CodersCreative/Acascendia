@@ -112,7 +112,7 @@
                     </div>
                 }
                 <MudPaper Style="position:fixed; width : 60%; bottom : 30px; margin-top : 20px;">
-                    @if (models is not null) {
+                    @if (models is not null && chat.userIds.Contains("AI")) {
                         <MudSelect @bind-Value="model" Variant="Variant.Outlined" Margin="Margin.Dense" Label="AI Model">
                             @foreach (var m in models)
                             {
