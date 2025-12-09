@@ -1,0 +1,255 @@
+﻿@page "/flash"
+@inject ISnackbar Snackbar
+@inject HttpClient Http
+@layout Layout.RootLayout
+
+<MudText Typo="Typo.h3" Class="mb-12 mt-20" Color="Color.Primary" Align="Align.Center">
+    AI FlashCards Generator
+</MudText>
+
+<MudText Typo="Typo.body2" Align="Align.Center">Turn your notes into interactive flashcards! Test your knowledge, track your progress,</MudText>
+<MudText Typo="Typo.body2" Align="Align.Center">and learn faster with smart, AI-generated quiz cards </MudText>
+
+<!-- Steps Cards (unchanged) -->
+<MudStack Row="true" Spacing="8" Class="ml-6 mt-8 mr-6" AlignItems="AlignItems.Center" Justify="Justify.Center">
+    <!-- Step 1 -->
+    <MudCard Style="border-radius: 16px; width:350px; height:350px;" Elevation="4" Class="p-2">
+        <MudCardContent>
+            <MudImage Src="images/written-notes.jpeg" Width="180" Height="150" Alt="Step 1" Class="rounded-lg ma-4 ml-18" />
+            <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-2" Align="Align.Center">Step 1: Upload</MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> Upload the Pdf file or word doc , and let our AI </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> make intuitive flashcards for u </MudText>
+        </MudCardContent>
+    </MudCard>
+
+    <MudIcon Icon="@Icons.Material.Filled.ArrowForwardIos" Size="Size.Large" />
+
+    <!-- Step 2 -->
+    <MudCard Style="border-radius: 16px; width:350px; height:350px;" Elevation="4" Class="p-2">
+        <MudCardContent>
+            <MudImage Src="images/written-notes.jpeg" Width="180" Height="150" Alt="Step 2" Class="rounded-lg ma-4 ml-18" />
+            <MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary" Align="Align.Center">Step 2: Revise</MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> Upload the Pdf file or word doc , and let our AI </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> make intuitive flashcards for u </MudText>
+        </MudCardContent>
+    </MudCard>
+
+    <MudIcon Icon="@Icons.Material.Filled.ArrowForwardIos" Size="Size.Large" />
+
+    <!-- Step 3 -->
+    <MudCard Style="border-radius: 16px; width:350px; height:350px;" Elevation="4" Class="p-2">
+        <MudCardContent>
+            <MudImage Src="images/written-notes.jpeg" Width="180" Height="150" Alt="Step 3" Class="rounded-lg ma-4 ml-18" />
+            <MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary" Align="Align.Center">Step 3: Test </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> Upload the Pdf file or word doc , and let our AI </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> make intuitive flashcards for u </MudText>
+        </MudCardContent>
+    </MudCard>
+</MudStack>
+
+<style>
+    .file-upload-input {
+        position: absolute;
+        width: 60%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 10;
+        opacity: 0;
+    }
+</style>
+<MudText Typo="Typo.body2" Align="Align.Center" Class="mt-12">
+    Create simple and beautiful cards with AI. You can make single or double sided cards
+</MudText>
+
+<MudTabs Rounded="true" RoundedSize="Medium" Elevation="2" Class="mt-6">
+
+    <!-- Tab 1: Type Notes -->
+    <MudTabPanel Text="Type Notes">
+        <MudTextField @bind-Value="UserNotes"
+                      Lines="8"
+                      Placeholder="Type your notes here..."
+                      FullWidth="true"
+                      Margin="Margin.Dense" />
+        <MudButton Color="Color.Primary"
+                   Class="mt-4"
+                   OnClick="GenerateFromTextAsync"
+                   Variant="Variant.Filled">
+            Generate Flashcards
+        </MudButton>
+    </MudTabPanel>
+
+    <!-- Tab 2: Upload File -->
+    <MudTabPanel Text="Upload File">
+        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                       @ref="_fileUpload"
+                       OnFilesChanged="OnInputFileChanged"
+                       AppendMultipleFiles
+                       InputClass="file-upload-input"
+                       Hidden="false">
+            <ActivatorContent>
+                <MudPaper Height="200px" Outlined="true" Class="@_dragClass">
+                    <MudText Typo="Typo.h6">
+                        Drag and drop files here or click
+                    </MudText>
+                    @foreach (var file in _fileNames)
+                    {
+                        <MudChip T="string" Color="Color.Dark" Text="@file" tabindex="-1" />
+                    }
+                </MudPaper>
+            </ActivatorContent>
+        </MudFileUpload>
+
+        <MudToolBar Gutters="false" Class="relative d-flex justify-end gap-4 mt-2">
+            <MudButton Color="Color.Primary" OnClick="OpenFilePickerAsync" Variant="Variant.Filled">
+                Open file picker
+            </MudButton>
+            <MudButton Color="Color.Primary" Disabled="@(!_fileNames.Any())" OnClick="UploadAsync" Variant="Variant.Filled">
+                Upload & Generate
+            </MudButton>
+            <MudButton Color="Color.Error" Disabled="@(!_fileNames.Any())" OnClick="ClearAsync" Variant="Variant.Filled">
+                Clear
+            </MudButton>
+        </MudToolBar>
+    </MudTabPanel>
+</MudTabs>
+
+@if (Flashcards.Any())
+{
+    <MudText Typo="Typo.h5" Class="mt-8 mb-4" Align="Align.Center">Generated Flashcards</MudText>
+    <MudGrid Justify="Justify.Center">
+        @foreach (var card in Flashcards)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Style="border-radius: 12px; margin-bottom: 12px;" Elevation="2" Class="p-2">
+                    <MudCardContent>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary"><b>Front:</b> @card.Front</MudText>
+                        <MudText Typo="Typo.body2"><b>Back:</b> @card.Back</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private string UserNotes = "";
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+    private string _dragClass = DefaultDragClass;
+    private readonly List<string> _fileNames = new();
+    private readonly List<IBrowserFile> _uploadedFiles = new();
+    private MudFileUpload<IReadOnlyList<IBrowserFile>>? _fileUpload;
+    private List<Flashcard> Flashcards = new();
+
+    private async Task GenerateFromTextAsync()
+    {
+        if (string.IsNullOrWhiteSpace(UserNotes))
+        {
+            Snackbar.Add("Please enter some notes.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/flashcards", new FlashcardRequest { Notes = UserNotes });
+            if (response.IsSuccessStatusCode)
+            {
+                var cards = await response.Content.ReadFromJsonAsync<List<Flashcard>>();
+                if (cards != null)
+                {
+                    Flashcards = cards;
+                    Snackbar.Add($"Generated {cards.Count} flashcards!", Severity.Success);
+                }
+            }
+            else
+            {
+                Snackbar.Add("Failed to generate flashcards.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OnInputFileChanged(InputFileChangeEventArgs e)
+    {
+        ClearDragClass();
+        _fileNames.Clear();
+        _uploadedFiles.Clear();
+        foreach (var file in e.GetMultipleFiles())
+        {
+            _fileNames.Add(file.Name);
+            _uploadedFiles.Add(file);
+        }
+    }
+
+    private Task OpenFilePickerAsync() => _fileUpload?.OpenFilePickerAsync() ?? Task.CompletedTask;
+
+    private async Task UploadAsync()
+    {
+        if (!_uploadedFiles.Any())
+        {
+            Snackbar.Add("No files selected.", Severity.Warning);
+            return;
+        }
+
+        foreach (var file in _uploadedFiles)
+        {
+            try
+            {
+                using var stream = file.OpenReadStream(maxAllowedSize: 5_000_000);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+
+                var content = new MultipartFormDataContent();
+                content.Add(new ByteArrayContent(ms.ToArray()), "file", file.Name);
+
+                var response = await Http.PostAsync("/api/flashcards/upload", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var cards = await response.Content.ReadFromJsonAsync<List<Flashcard>>();
+                    if (cards != null)
+                    {
+                        Flashcards.AddRange(cards);
+                        Snackbar.Add($"Generated {cards.Count} flashcards from {file.Name}!", Severity.Success);
+                    }
+                }
+                else
+                {
+                    Snackbar.Add($"Failed to upload {file.Name}.", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error processing {file.Name}: {ex.Message}", Severity.Error);
+            }
+        }
+
+        _uploadedFiles.Clear();
+        _fileNames.Clear();
+    }
+
+    private async Task ClearAsync()
+    {
+        await (_fileUpload?.ClearAsync() ?? Task.CompletedTask);
+        _fileNames.Clear();
+        _uploadedFiles.Clear();
+        Flashcards.Clear();
+        ClearDragClass();
+    }
+
+    private void SetDragClass() => _dragClass = $"{DefaultDragClass} mud-border-primary";
+    private void ClearDragClass() => _dragClass = DefaultDragClass;
+
+    public class Flashcard
+    {
+        public string Front { get; set; } = "";
+        public string Back { get; set; } = "";
+    }
+
+    public class FlashcardRequest
+    {
+        public string Notes { get; set; } = "";
+    }
+}

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.ResponseCompression;
 using OllamaSharp;
 using studbud.Hubs;
+using studbud.Server.Models;
 using SurrealDb.Net;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +16,8 @@ var surreal = SurrealDbOptions
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
+builder.Services.AddHttpClient<AiApi>();
+
 builder.Services.AddResponseCompression(opts =>
 {
     opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/octet-stream"]);
