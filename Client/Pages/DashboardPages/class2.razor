@@ -1,0 +1,165 @@
+﻿@page "/weather"
+@layout MainLayoutForDash
+<MudGrid>
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+        <MudPaper Style="
+    background-image: url('images/Physics.jpg');
+    background-size: cover;
+    background-position: center;
+    height: 300px;
+    border-radius: 16px;">
+
+            <MudStack Spacing="3" Class="ml-6 mt-6" Justify="Justify.Center">
+                <MudText Typo="Typo.h5" Class="mt-4">
+                    L6-Violet
+                </MudText>
+                <MudText Typo="Typo.h6">
+                    Teacher
+                </MudText>
+            </MudStack>
+
+
+        </MudPaper>
+
+        <MudTabs Elevation="2" Rounded="true" PanelClass="pa-6" Class="mt-4">
+            <MudTabPanel Text="Home">
+                <MudGrid Justify="Justify.Center" Class="mt-5">
+                    <MudItem xs="12" md="4">
+
+
+                        <MudText Typo="Typo.h5" Class="mt-4">
+                            Classes
+                        </MudText>
+                        <div class="flex-grow-1 overflow-y-auto pr-2">
+
+
+                            @foreach (var contact in Contacts)
+                            {
+                                <MudCard Class="@(SelectedClass == contact ? "mb-2 elevation-4" : "mb-2 elevation-0 transparent-card")"
+                                         Style="border-radius:12px; background-color:#292929">
+                                    <MudButton Variant="Variant.Text"
+                                               Color="@((SelectedClass == contact) ? Color.Primary : Color.Default)"
+                                               OnClick="@(()=>SelectContact(contact))"
+                                               Style="width:100%; text-align:left; margin-bottom:8px; align-items:center; justify-content:flex-start; justify-items:center; align-content:center;">
+
+                                        @contact.Name
+                                    </MudButton>
+                                </MudCard>
+                            }
+                        </div>
+
+
+                    </MudItem>
+                    <MudItem xs="12" md="8">
+
+                        <MudStack Spacing="4">
+                            <MudCard Style="border-radius: 16px; height:200px; background-color:#292929; " Elevation="4" Class="p-2">
+
+                                <MudCardContent>
+                                    <MudText Typo="Typo.h5">Class Info</MudText>
+                                    <MudDivider Light="true">
+
+                                    </MudDivider>
+                                    <MudText Typo="Typo.body1">Code: 207976</MudText>
+                                    <MudText Typo="Typo.body1">Descirptions</MudText>
+                                    <MudSpacer></MudSpacer>
+                                    <br />
+                                    <MudButton Variant="Variant.Filled" Class="mt-8" Style="background-color:#5a47ff">
+                                        Edit
+                                    </MudButton>
+
+
+                                </MudCardContent>
+                            </MudCard>
+
+                            <MudCard Style="border-radius: 16px; height:200px; background-color:#292929; " Elevation="4" Class="p-2">
+
+                                <MudCardContent>
+                                    <MudText Typo="Typo.h5">Pinned Links</MudText>
+                                    <MudDivider Light="true">
+
+                                    </MudDivider>
+                                    <MudText Typo="Typo.body1">Code: 207976</MudText>
+                                    <MudText Typo="Typo.body1">Descirptions</MudText>
+                                    <MudSpacer></MudSpacer>
+                                    <br />
+                                    <MudButton Variant="Variant.Filled" Class="mt-8" Style="background-color:#5a47ff">
+                                        Edit
+                                    </MudButton>
+
+
+                                </MudCardContent>
+                            </MudCard>
+
+                            <MudCard Style="border-radius: 16px; height:200px; background-color:#292929; " Elevation="4" Class="p-2">
+
+                                <MudCardContent>
+                                    <MudText Typo="Typo.h5">Pinned Links</MudText>
+                                    <MudDivider Light="true">
+
+                                    </MudDivider>
+                                    <MudText Typo="Typo.body1">Code: 207976</MudText>
+                                    <MudText Typo="Typo.body1">Descirptions</MudText>
+                                    <MudSpacer></MudSpacer>
+                                    <br />
+                                    <MudButton Variant="Variant.Filled" Class="mt-8" Style="background-color:#5a47ff">
+                                        Edit
+                                    </MudButton>
+
+
+                                </MudCardContent>
+                            </MudCard>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+            <MudTabPanel Text="Stream">
+
+            </MudTabPanel>
+            <MudTabPanel Text="Assignments">
+                <MudText>Content Three</MudText>
+            </MudTabPanel>
+
+        </MudTabs>
+
+
+    </MudContainer>
+
+</MudGrid>
+
+
+@code {
+    // ... (Your existing @code block is here) ...
+    private string UserMessage { get; set; } = "";
+    private Contact? SelectedClass { get; set; }
+    private List<Contact> Contacts = new()
+    {
+        new Contact { Name="Alice" },
+        new Contact { Name="Bob" },
+        new Contact { Name="Charlie" }
+    };
+    private void SelectContact(Contact contact)
+    {
+        SelectedClass = contact;
+    }
+    private void SendMessage()
+    {
+        if (SelectedClass == null || string.IsNullOrWhiteSpace(UserMessage)) return;
+        SelectedClass.Messages.Add(new ChatMessage { Text = UserMessage, IsUser = true });
+        SelectedClass.Messages.Add(new ChatMessage { Text = "AI reply placeholder", IsUser = false });
+        UserMessage = "";
+        StateHasChanged();
+    }
+    public class Contact
+    {
+        public string Name { get; set; } = "";
+        public List<ChatMessage> Messages { get; set; } = new();
+        public string ProfilePicUrl { get; set; } = "https://www.transparentpng.com/thumb/user/gray-user-profile-icon-png-fP8Q1P.png";
+    }
+    public class ChatMessage
+    {
+        public string Text { get; set; } = "";
+        public bool IsUser { get; set; }
+    }
+}
+

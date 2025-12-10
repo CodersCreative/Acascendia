@@ -1,0 +1,162 @@
+﻿@page "/chat2"
+@layout Shared.ChatLayout
+<style>
+    .transparent-card {
+        background-color: transparent !important;
+        box-shadow: none !important;
+        transition: background-color 0.2s;
+    }
+
+        .transparent-card:hover {
+            background-color: rgba(var(--mud-palette-action-hover), 0.5) !important;
+        }
+</style>
+
+<!-- This outer MudContainer will manage the main page layout -->
+
+
+
+
+    <!-- Main Chat Grid (Set a fixed height for the remaining area) -->
+    <MudGrid Style="height: calc(100vh - 180px);" >
+        <!-- Adjust 180px based on exact height of header and desired spacing -->
+        <!-- Contacts column -->
+        <MudItem xs="12" md="2" Style="height:100%;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-4 mb-4"> 
+                <MudText Typo="Typo.h5" Style="font-weight:bold;">Chats</MudText>
+                <MudSpacer/>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Size="Size.Small" Style="height:30px; background-color:#292929; color:white" />
+                <MudIconButton Icon="@Icons.Material.Filled.FilterList" Variant="Variant.Filled"  Size="Size.Small" Style="height:30px; background-color:#292929; color:white"  />
+            </MudStack>
+
+            <!-- Page Header (Moved out of the grid for cleaner layout) -->
+            
+            <MudStack Row="true" Class="mb-4">
+                <MudAvatar Size="Size.Medium" Alt="Profile" Class="mr-2" >T</MudAvatar>
+                <MudText Typo="Typo.subtitle1" Class="align-self-center">My Profile</MudText>
+            </MudStack>
+            <!-- This inner container must use 100% height and flex column layout -->
+            <div class="d-flex flex-column" style="height: 100%;">
+
+                <!-- Top Section: Contacts List (flex-grow-1 pushes bottom card down) -->
+                <div class="flex-grow-1 overflow-y-auto pr-2">
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">Contacts</MudText>
+
+                    @foreach (var contact in Contacts)
+                    {
+                        <MudCard Class="@(SelectedContact == contact ? "mb-2 elevation-4" : "mb-2 elevation-0 transparent-card")"
+                             Style="border-radius:12px; background-color:#292929">
+                            <MudButton Variant="Variant.Text"
+                                       Color="@((SelectedContact == contact) ? Color.Primary : Color.Default)"
+                                       OnClick="@(()=>SelectContact(contact))"
+                                       Style="width:100%; text-align:left; margin-bottom:8px; align-items:center; justify-content:flex-start; justify-items:center; align-content:center;">
+                            <MudAvatar Size="Size.Medium"  Style="background-color:white" Alt="@contact.Name" Class="mr-2">
+                                <MudImage Src="https://www.transparentpng.com/thumb/user/gray-user-profile-icon-png-fP8Q1P.png" ></MudImage>
+                                </MudAvatar>
+                                @contact.Name
+                            </MudButton>
+                        </MudCard>
+                    }
+                </div>
+                <!-- End of Contacts List -->
+                <!-- Bottom Section: This will now be pinned to the bottom -->
+                <MudCard Class="mt-3 pa-2 elevation-4" Style="border-radius:15px">
+                    <MudText Typo="Typo.body2" Class="mb-3">Chat with friends and Classmates</MudText>
+
+                    <MudSpacer></MudSpacer>
+
+                    <br />
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Style="border-radius:15px" Size="Size.Small" FullWidth="true">New Group</MudButton>
+                </MudCard>
+                <!-- End of Bottom Section -->
+
+            </div>
+        </MudItem>
+
+        <!-- Messages column -->
+        <MudItem xs="12" md="10" Style="height:100%;">
+        <MudPaper Class="d-flex flex-column" Style="height:95vh; border-radius:16px; padding:16px; background-color:#292929;">
+                <!-- Changed height to 100% -->
+                <!-- Messages header -->
+                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">
+                    @SelectedContact?.Name 
+                </MudText>
+                <MudDivider Light="true" Style="background-color:white;  height:1px; flex-grow:0; flex-shrink:0;" />
+
+                <div class="flex-grow-1 overflow-y-auto px-4 py-2">
+                    @if (SelectedContact != null)
+                    {
+                        @foreach (var msg in SelectedContact.Messages)
+                        {
+                            <MudStack Row="true"
+                                      Justify="msg.IsUser ? Justify.FlexEnd : Justify.FlexStart"
+                                      AlignItems="AlignItems.End"
+                                      Class="mb-2 mx-6" style="width: calc(100% - 2rem);">
+                                @if (!msg.IsUser)
+                                {
+                                    <MudAvatar Size="Size.Medium"
+                                               Image="@SelectedContact.ProfilePicUrl"
+                                               Alt="@SelectedContact.Name"
+                                               Class="mr-2" />
+                                }
+                                <MudPaper Class="pa-2"
+                                          Style="@($"border-radius:12px; max-width:70%; background-color:{(msg.IsUser ? "#6b4fc5" : "#e0e0e0")}; color:{(msg.IsUser ? "white" : "black")};")">
+                                    @msg.Text
+                                </MudPaper>
+                                @if (msg.IsUser)
+                                {
+                                    <MudAvatar Size="Size.Medium" Image="@SelectedContact.ProfilePicUrl" Alt="You" Class="ml-2" />
+                                }
+                            </MudStack>
+                        }
+                    }
+                </div>
+
+                @if (SelectedContact != null)
+                {
+                    <MudStack Row="true" Spacing="2" Class="mt-2 px-4 pb-4">
+                        <MudTextField Variant="Variant.Outlined" @bind-Value="UserMessage" Placeholder="Type a message..." FullWidth="true" />
+                        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SendMessage">Send</MudButton>
+                    </MudStack>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+
+
+@code {
+    // ... (Your existing @code block is here) ...
+    private string UserMessage { get; set; } = "";
+    private Contact? SelectedContact { get; set; }
+    private List<Contact> Contacts = new()
+    {
+        new Contact { Name="Alice" },
+        new Contact { Name="Bob" },
+        new Contact { Name="Charlie" }
+    };
+    private void SelectContact(Contact contact)
+    {
+        SelectedContact = contact;
+    }
+    private void SendMessage()
+    {
+        if (SelectedContact == null || string.IsNullOrWhiteSpace(UserMessage)) return;
+        SelectedContact.Messages.Add(new ChatMessage { Text = UserMessage, IsUser = true });
+        SelectedContact.Messages.Add(new ChatMessage { Text = "AI reply placeholder", IsUser = false });
+        UserMessage = "";
+        StateHasChanged();
+    }
+    public class Contact
+    {
+        public string Name { get; set; } = "";
+        public List<ChatMessage> Messages { get; set; } = new();
+        public string ProfilePicUrl { get; set; } = "https://www.transparentpng.com/thumb/user/gray-user-profile-icon-png-fP8Q1P.png";
+    }
+    public class ChatMessage
+    {
+        public string Text { get; set; } = "";
+        public bool IsUser { get; set; }
+    }
+}
