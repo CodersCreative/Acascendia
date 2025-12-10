@@ -1,0 +1,102 @@
+/* --- Base Styles for Correct Scrolling --- */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* Prevents horizontal scrolling caused by animations */
+    background-color: #0d0b1c; /* Fallback */
+}
+
+/* --- Force the Content Wrapper to Scroll --- */
+#main-scroll-container {
+    min-height: 100vh; /* Ensures the container is at least full height */
+    overflow-y: scroll !important; /* Explicitly forces vertical scrolling */
+}
+
+
+/* --- Your Gradient & Blob Styles --- */
+.gradient-bg {
+    width: 100vw;
+    min-height: 100vh;
+    position: relative;
+    background: linear-gradient(180deg, #0d0b1c 0%, #1c1b2f 50%, #2a2750 100%);
+}
+
+.scrollable-content {
+    position: relative;
+    z-index: 1; /* Content above blobs */
+}
+
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    filter: blur(22px);
+    z-index: 0; /* Blobs behind content */
+}
+
+/* Individual blobs and keyframes remain unchanged from your original code */
+.gradients-container .blob1 {
+    width: 40%;
+    height: 40%;
+    top: 10%;
+    left: 5%;
+    background: radial-gradient(circle, rgba(70,50,180,0.6), rgba(70,50,180,0) 70%);
+    animation: moveVertical 60s ease-in-out infinite;
+}
+
+.gradients-container .blob2 {
+    width: 50%;
+    height: 50%;
+    top: 30%;
+    left: 40%;
+    background: radial-gradient(circle, rgba(100,70,220,0.55), rgba(100,70,220,0) 70%);
+    animation: moveInCircle 80s linear infinite;
+}
+
+.gradients-container .blob3 {
+    width: 35%;
+    height: 35%;
+    top: 50%;
+    left: 20%;
+    background: radial-gradient(circle, rgba(120,90,255,0.5), rgba(120,90,255,0) 70%);
+    animation: moveHorizontal 100s ease-in-out infinite;
+}
+
+@keyframes moveVertical {
+    0% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-50px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes moveHorizontal {
+    0% {
+        transform: translateX(0);
+    }
+
+    50% {
+        transform: translateX(50px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+@keyframes moveInCircle {
+    0% {
+        transform: rotate(0deg) translate(-20px) rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg) translate(-20px) rotate(360deg);
+    }
+}

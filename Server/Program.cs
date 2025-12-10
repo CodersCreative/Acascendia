@@ -71,24 +71,6 @@ app.Run();
 
 async Task InitializeDbAsync()
 {
-    HttpClient httpClient = new HttpClient();
-
-    var needsStart = false;
-
-    try
-    {
-        needsStart = !(await httpClient.GetAsync(surrealUrl)).IsSuccessStatusCode;
-    }catch (Exception e)
-    {
-        needsStart = true;
-    }
-
-    if (needsStart) {
-        Thread newThread = new Thread(new ThreadStart(() => Process.Start("surreal start memory --allow-all --unauthenticated")));
-        newThread.Start();
-        Thread.Sleep(500);
-    }
-
     var surrealDbClient = new SurrealDbClient(surreal);
     await DefineSchemaAsync(surrealDbClient);
 }
