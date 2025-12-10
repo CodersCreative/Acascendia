@@ -8,29 +8,25 @@ using MudBlazor;
 public class EcocashClient
 {
     public string apiKey {get; set;}
-    public string merchant {get; set;}
     public string baseUrl {get; set;} = "https://developers.ecocash.co.zw/api/ecocash_pay/";
     public string mode {get; set;}
     HttpClient httpClient = new HttpClient();
 
-    public EcocashClient(string apiKey, string merchant, string mode = "sandbox")
+    public EcocashClient(string apiKey, string mode = "sandbox")
     {
         this.apiKey = apiKey;
-        this.merchant = merchant;
         this.mode = mode;
-        SetHeaders();
     }
 
     private void SetHeaders()
     {
         httpClient.DefaultRequestHeaders.Add("Content-Type", "application/json");
         httpClient.DefaultRequestHeaders.Add("X-API-KEY", this.apiKey);
-        httpClient.DefaultRequestHeaders.Add("Merchant", this.merchant);
     }
 
     public async Task<InitPaymentResponse> InitPayment(string phone, float amount, string reason) {
+        SetHeaders();
         var reference = Guid.NewGuid();
-
 
         var url = $"{this.baseUrl}api/v2/payment/instant/c2b/${this.mode}";
 
@@ -49,6 +45,7 @@ public class EcocashClient
     }
 
     public async Task<RefundResponse> RefundPayment(RefundDetails details) {
+        SetHeaders();
         var url = $"{this.baseUrl}/api/v2/refund/instant/c2b/${this.mode}";
 
         var body = new {
@@ -66,6 +63,7 @@ public class EcocashClient
     }
 
     public async Task<LookupTransactionResponse> LookupTransaction(string reference, string phone) {
+        SetHeaders();
         var url = $"{this.baseUrl}/api/v1/transaction/c2b/status/${this.mode}";
 
         var body = new {
@@ -79,6 +77,7 @@ public class EcocashClient
     }
 
     public async Task<LookupTransactionResponse> PollTransaction(InitPaymentResponse response, PollStrategies strategy = PollStrategies.Interval, PollOptions? options = null) {      
+      SetHeaders();
       var multiplier = options?.multiplier ?? 2;
       var sleep = options?.sleep ?? 1000;
       var interval = options?.interval ?? 10.0f;

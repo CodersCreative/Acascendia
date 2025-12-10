@@ -16,11 +16,13 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     HttpClient httpClient = new HttpClient();
     private readonly SurrealDbClient dbClient;
     private readonly OllamaSharp.OllamaApiClient AIClient;
+    private readonly EcocashClient ecocashClient;
 
     public AppHub(SurrealDbClient dbClient)
     {
         this.dbClient = dbClient;
         this.AIClient = new OllamaSharp.OllamaApiClient("http://localhost:11434/");
+        this.ecocashClient = new EcocashClient("QVYPAT1icVGSxlD20aTH4ZV2SMg8bdUN");
     }
 
     public override Task OnConnectedAsync()
@@ -42,6 +44,42 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         await dbClient.Query($"UPDATE {id} SET money += {amt};");
         var res = await dbClient.Select<DbUser>(id);
         return res?.ToBase();
+    }
+
+    public async Task EnsureTransaction(InitPaymentResponse response, Payment payment)
+    {
+        var res = await ecocashClient.PollTransaction(response);
+        if (res.paymentSuccess)
+        {
+            RecordId toId = ("user", payment.toId!);
+            await dbClient.Query($"UPDATE {toId} SET money += {payment.amount};");
+            await dbClient.Create("payment", new DbPayment(payment));
+        }
+    }
+
+    public async Task<Payment?> ProcessPayment(Payment payment) {
+        if (payment.reasonType == PaymentReasonType.Buy)
+        {
+            var res = await ecocashClient.InitPayment(payment.fromId, payment.amount ?? 0.0f, payment.reason);
+            Thread verifyThread = new Thread(new ThreadStart(() => EnsureTransaction(res, payment)));
+            verifyThread.Start();
+            return await GetDisplayPayment(payment, payment.toId);
+        }
+
+
+        var user = await GetUser(payment.fromId);
+        if (user.money > payment.amount) {
+            RecordId fromId = ("user", payment.fromId);
+            await dbClient.Query($"UPDATE {fromId} SET money -= {payment.amount};");
+            RecordId toId = ("user", payment.toId!);
+            await dbClient.Query($"UPDATE {toId} SET money += {payment.amount};");
+            var res = (await dbClient.Create("payment", new DbPayment(payment))).ToBase();
+            return await GetDisplayPayment(res, res.fromId) ;
+        }
+        else
+        {
+            return null;
+        }
     }
 
     public async Task<Message> SendMessage(Message msg)
@@ -264,6 +302,29 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return await SendMessage(response);
     }
 
+    private async Task<Payment> GetDisplayPayment(Payment payment, string userId)
+    {
+        if (payment.fromId == userId)
+        {
+            payment.toId = (await GetUser(payment.toId)).username;
+        } else if (payment.reasonType != PaymentReasonType.Buy){
+            payment.fromId = (await GetUser(payment.fromId)).username;
+        }
+
+        switch (payment.reasonType)
+        {
+            case PaymentReasonType.Quiz:
+                payment.reason = (await GetQuiz(payment.reason)).name;
+                break;
+            case PaymentReasonType.Flashcard:
+                payment.reason = (await GetFlashcard(payment.reason)).name;
+                break;
+            
+        }
+
+        return payment; 
+    }
+
     public async Task<List<Payment>> GetDisplayPayments(string userId)
     {
         var result = await dbClient.Query(
@@ -278,23 +339,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
             
             for (var i = 0; payments.Count > i; i++)
             {
-                if (payments[i].fromId == userId)
-                {
-                    payments[i].toId = (await GetUser(payments[i].toId)).username;
-                } else {
-                    payments[i].fromId = (await GetUser(payments[i].fromId)).username;
-                }
-
-                switch (payments[i].reasonType)
-                {
-                    case PaymentReasonType.Quiz:
-                        payments[i].reason = (await GetQuiz(payments[i].reason)).name;
-                        break;
-                    case PaymentReasonType.Flashcard:
-                        payments[i].reason = (await GetFlashcard(payments[i].reason)).name;
-                        break;
-                    
-                }
+                payments[i] = await GetDisplayPayment(payments[i], userId);
             }
 
             return payments;
@@ -719,6 +764,33 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return [];
     }
 
+    public async Task<List<User>> SearchUsers(string search)
+    {
+        List<DbUser> users = [];
+
+        if (search.Trim().Any()) {
+            var res = await dbClient.Query(
+                $"SELECT *, search::score(1) + search::score(2) AS score FROM user WHERE username @1@ {search} or email @2@ {search} ORDER BY score DESC;"
+            );
+            users = res.GetValue<List<DbUser>>(0);
+            if (users is not null && users.Any())
+            {
+                return users.Select((x) => x.ToBase()).ToList();
+            }
+        }
+
+        var result = await dbClient.Query(
+            $"SELECT * FROM flashcard LIMIT 20;"
+        );
+        users = result.GetValue<List<DbUser>>(0);
+        if (users is not null)
+        {
+            return users.Select((x) => x.ToBase()).ToList();
+        }
+            
+        return [];
+    }
+
     public async Task<Chat> GetChatWithName(string chatId, string userId)
     {
         var chat = (await dbClient.Select<DbChat>(("chat", chatId)))!.ToBase();
@@ -764,7 +836,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<string> GetChatNameInternal(Chat chat, string userId)
     {
-        if (chat.name is null)
+        if (chat.name is null || !chat.name.Any())
         {
             var other = chat.userIds?.FirstOrDefault();
             if (other is null)

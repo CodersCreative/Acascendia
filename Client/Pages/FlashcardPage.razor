@@ -1,3 +1,5 @@
+@page "/flashcard/{id}"
+@page "/flashcard"
 @using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Shared
 @using studbud.Shared.Models
@@ -7,6 +9,7 @@
 @inject HubService hubService
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
 @implements IAsyncDisposable
+@layout DashLayout
 
 <!-- Main Chat Grid (Set a fixed height for the remaining area) -->
 <MudGrid Style="height:100%;">
@@ -75,10 +78,8 @@
 
 @code {
     [Parameter]
-    public Action<Flashcard?, bool> OnFlashcardChanged {get; set;} = (x, y) => {};
-    [Parameter]
+    public string? id {get; set;}
     public bool editing {get; set;} = false;
-    [Parameter]
     public Flashcard? flashcard {get; set;}
     private HubConnection? hub;
     private List<Flashcard> flashcards = new();
@@ -91,6 +92,10 @@
 
         hub = hubService.GetHubConnection().Build();
         await hub.StartAsync();
+
+        if (id is not null && flashcard is null) {
+            flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), id);
+        }
     }
 
     private void UpdateCurrentFlashcard(Flashcard f) {
@@ -98,7 +103,6 @@
             if (flashcards[i]?.id == flashcard?.id) {
                 flashcards[i] = f;
                 flashcard = f;
-                OnFlashcardChanged(f, true);
                 StateHasChanged();
                 return;
             }
@@ -108,13 +112,11 @@
     private async Task LoadFlashcard(string flashId, bool bypass = false) {
         if (flashId == flashcard?.id && !bypass) {
             flashcard = null;
-            OnFlashcardChanged(null, false);
             return;
         }
         flashcard = null;
         StateHasChanged();
         flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), flashId);
-        OnFlashcardChanged(flashcard, editing);
         StateHasChanged();
     }
 
@@ -148,7 +150,16 @@
         await base.OnAfterRenderAsync(firstRender);
         if (current_user is null) {
             current_user = await sessionStorage.GetItemAsync<User>("user");
+            
+            var dirFlash = await sessionStorage.GetItemAsync<string>("flashcardDirect");
+            if (dirFlash is not null) {
+                flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), dirFlash);
+                editing = true;
+            }
+
+            try{
             flashcards = await hub.InvokeAsync<List<Flashcard>>(nameof(IAppHubServer.GetFlashcardsFromUser), current_user.id);
+            }catch(Exception e) {}
 
             if (flashcard is not null) {
                 await LoadFlashcard(flashcard.id, true);

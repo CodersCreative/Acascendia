@@ -1,106 +1,257 @@
 @page "/dash"
 @using Microsoft.AspNetCore.SignalR.Client
-@using studbud.Client.Pages.DashboardPages
 @using studbud.Client.Shared
 @using studbud.Client.Widgets
+@using studbud.Shared
 @using studbud.Shared.Models
 @inject NavigationManager navigationManager
-@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject IDialogService Dialog
 @inject HubService hubService
-@layout MinLayout
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+@layout DashLayout
 
-<MudLayout>
-    <MudAppBar Elevation="0" >
-        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnBack"/>
-        <MudText Typo="Typo.h5" Class="ml-3">studbud</MudText>
-        <MudSpacer />
-    </MudAppBar>
-    <MudDrawer @bind-Open="@open" Fixed="true" Elevation="0" ClipMode="DrawerClipMode.Always" Variant="@DrawerVariant.Mini" OpenMiniOnHover="true" Breakpoint="Breakpoint.None">
-        <MudNavMenu>
-            <MudNavMenu>
-                <MudNavLink IconColor="@(page == Page.Home ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Home)" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-                <MudNavLink IconColor="@(page == Page.Chat ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Chat)" Icon="@Icons.Material.Filled.Chat">Chat</MudNavLink>
-                <MudNavLink IconColor="@(page == Page.Class ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Class)" Icon="@Icons.Material.Filled.School">Class</MudNavLink>
-                <MudNavLink IconColor="@(page == Page.Quiz ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Quiz)" Icon="@Icons.Material.Filled.Quiz">Quiz</MudNavLink>
-                <MudNavLink IconColor="@(page == Page.Flashcard ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Flashcard)" Icon="@Icons.Material.Filled.ViewCarousel">Flashcard</MudNavLink>
-            </MudNavMenu>
-        </MudNavMenu>
-    </MudDrawer>
-    <MudMainContent>
-        <MudPaper Class="rounded-xl pa-6 mx-auto" Style="border-radius: 20px 0 0 0; width:100%; height:100%; padding : 20px;">
-            @switch (page) {
-                case Page.Home:
-                    <studbud.Client.Pages.DashboardPages.Default 
-                        OnOpenClass="(x) => {clss = x; SwitchPage(Page.Class);}" 
-                        OnOpenChat="(x) => {chat = x; SwitchPage(Page.Chat);}" 
-                        OnOpenQuiz="(x) => {quiz = x; editingQuiz = true; SwitchPage(Page.Quiz);}" 
-                        OnCreateQuiz="() => {quiz = null; editingQuiz=true; SwitchPage(Page.Quiz);}" 
-                        OnOpenFlashcard="(x) => {flashcard = x; editingFlashcard = true; SwitchPage(Page.Flashcard);}" 
-                        OnCreateFlashcard="() => {flashcard = null; editingFlashcard=true; SwitchPage(Page.Flashcard);}" 
-                    />
-                    break;
-                case Page.Chat:
-                    <studbud.Client.Pages.DashboardPages.ChatPage chat="chat" OnChatChanged="(x) => {chat = x; StateHasChanged();}"/>
-                    break;
-                case Page.Class:
-                    <studbud.Client.Pages.DashboardPages.ClassPage clss="clss" OnClassChanged="(x) => {clss = x; StateHasChanged();}"/>
-                    break;
-                case Page.Quiz:
-                    <studbud.Client.Pages.DashboardPages.QuizPage quiz="quiz" editing="@(editingQuiz ?? false)" OnQuizChanged="(x, y) => {quiz = x; editingQuiz = y; StateHasChanged();}"/>
-                    break;
-                case Page.Flashcard:
-                    <studbud.Client.Pages.DashboardPages.FlashcardPage flashcard="flashcard" editing="@(editingFlashcard ?? false)" OnFlashcardChanged="(x, y) => {flashcard = x; editingFlashcard = y; StateHasChanged();}"/>
-                    break;
-            }
-        </MudPaper>
-    </MudMainContent>
-</MudLayout>
-
+<MudStack Spacing="5" Class="ml-20 mt-15" Justify="Justify.FlexStart" AlignItems="AlignItems.Center">
+    <MudStack Row="true" Spacing="3">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.School"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnCreateClass">
+            Create Class
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Chat"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnCreateChat">
+            Create Chat
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Quiz"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnCreateQuiz">
+            Create Quiz
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ViewCarousel"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnCreateFlashcard">
+            Create Flashcard
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.MeetingRoom"
+                   Class="px-10 py-2"
+                   Style="font-size: 1.00rem; border-radius: 15px;"
+                   OnClick="OnJoinClass">
+            Join Class
+        </MudButton>
+    </MudStack>
 
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+    @if (classes.Count > 0) {
+        <MudText Typo="Typo.h5" Style="font-weight: bold;" Class="mt-8">
+            Classes
+        </MudText>
+
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" md="8" lg="8">
+                <MudCard Style="border-radius: 16px; " Elevation="4" Class="p-2">
+                    <MudCardContent>
+                            <MudGrid Justify="Justify.SpaceBetween">
+                                @foreach (var c in classes) {   
+                                    <MudItem xs="4">
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Surface" OnClick="() => {OnOpenClass(c.id);}" Style="border-radius : 10px;" Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                            <MudText Typo="Typo.h6" Align="Align.Center">@c.name</MudText>
+                                        </MudButton>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                    </MudCardContent>
+                    
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+
+    @if (chats.Count > 0) {
+        <MudText Typo="Typo.h5" Style="font-weight: bold;">
+            Chats
+        </MudText>
+
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" md="8" lg="8">
+                <MudCard Style="border-radius: 16px;  " Elevation="4" Class="p-2">
+                    <MudCardContent>
+                            <MudGrid Justify="Justify.SpaceBetween">
+                                @foreach (var c in chats) {   
+                                    <MudItem xs="3">
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Surface" OnClick="() => {OnOpenChat(c.id);}" Style="border-radius : 10px;" Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                            <MudText Typo="Typo.h6" Align="Align.Center">@c.name</MudText>
+                                        </MudButton>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+
+    @if (quizzes.Count > 0) {
+        <MudText Typo="Typo.h5" Style="font-weight: bold;">
+            Quizzes
+        </MudText>
+
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" md="8" lg="8">
+                <MudCard Style="border-radius: 16px;" Elevation="4" Class="p-2">
+                    <MudCardContent>
+                        <MudGrid Justify="Justify.SpaceBetween">
+                            @foreach (var q in quizzes) {   
+                                <MudItem xs="3">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Surface" OnClick="() => {OnOpenQuiz(q.id);}" Style="border-radius : 10px;" Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                        <MudText Typo="Typo.h6" Align="Align.Center">@q.name</MudText>
+                                    </MudButton>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+
+    @if (flashcards.Count > 0) {
+        <MudText Typo="Typo.h5" Style="font-weight: bold;">
+            Flashcards
+        </MudText>
+
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" md="8" lg="8">
+                <MudCard Style="border-radius: 16px;" Elevation="4" Class="p-2">
+                    <MudCardContent>
+
+                            <MudGrid Justify="Justify.SpaceBetween">
+                                @foreach (var f in flashcards) {   
+                                    <MudItem xs="3">
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Surface" OnClick="() => {OnOpenFlashcard(f.id);}" Style="border-radius : 10px;" Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                            <MudText Typo="Typo.h6" Align="Align.Center">@f.name</MudText>
+                                        </MudButton>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+
+</MudStack>
 
 @code {
-    private bool open = false;
-    private Page page = Page.Home;
+    private List<Class> classes = [];
+    private List<Quiz> quizzes = [];
+    private List<Flashcard> flashcards = [];
+    private List<Chat> chats = [];
     private HubConnection? hub;
-    private Class? clss;
-    private Chat? chat;
-    private Quiz? quiz;
-    private bool? editingQuiz;
-    private Flashcard? flashcard;
-    private bool? editingFlashcard;
-    private User? current_user;
+    private User current_user;
 
-    enum Page {
-        Home,
-        Class,
-        Chat,
-        Quiz,
-        Flashcard,
-    }
 
-    private void DrawerToggle()
+
+    private Task OnCreateClass()
     {
-        open = !open;
+        return Dialog.ShowAsync<CreateClassDialog>("", new DialogParameters() {
+            ["OnClassAdded"] = (Class? clss) => {
+                if (clss is not null) {
+                    classes.Add(clss);
+                }
+                StateHasChanged();
+            }
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+
     }
 
-    private void SwitchPage(Page p) {
-        page = p;
+    public void OnCreateQuiz() {
+        navigationManager.NavigateTo($"/quiz");
+    }
+
+    public void OnCreateFlashcard() {
+        navigationManager.NavigateTo($"/flascard");
+    }
+
+    public void OnOpenQuiz(string id) {
+        navigationManager.NavigateTo($"/quiz/{id}");
+    }
+
+    public void OnOpenFlashcard(string id) {
+        navigationManager.NavigateTo($"/flascard/{id}");
+    }
+
+    public void OnOpenChat(string id) {
+        navigationManager.NavigateTo($"/chat/{id}");
+    }
+
+    public void OnOpenClass(string id) {
+        navigationManager.NavigateTo($"/class/{id}");
+    }
+
+    private Task OnJoinClass()
+    {
+        return Dialog.ShowAsync<JoinClassDialog>("", new DialogParameters() {
+            ["OnClassAdded"] = (Class? clss) => {
+                if (clss is not null) {
+                    classes.Add(clss);
+                }
+                StateHasChanged();
+            }
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+
+    }
+
+    private Task OnCreateChat()
+    {
+        return Dialog.ShowAsync<CreateChatDialog>("", new DialogParameters() {
+            ["OnChatAdded"] = (Chat? chat) => {
+                if (chat is not null) {
+                    chats.Add(chat);
+                }
+                StateHasChanged();
+            }
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+    }
+
+    private async Task InitData() {
+        classes = await hub.InvokeAsync<List<Class>>(nameof(IAppHubServer.GetClassesFromUser), current_user.id);
+        chats = await hub.InvokeAsync<List<Chat>>(nameof(IAppHubServer.GetChatsFromUser), current_user.id);
+        quizzes = await hub.InvokeAsync<List<Quiz>>(nameof(IAppHubServer.GetQuizzesFromUser), current_user.id);
+        flashcards = await hub.InvokeAsync<List<Flashcard>>(nameof(IAppHubServer.GetFlashcardsFromUser), current_user.id);
         StateHasChanged();
-    }
-
-    private void OnBack() {
-        navigationManager.NavigateTo("/");
     }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        
         hub = hubService.GetHubConnection().Build();
         await hub.StartAsync();
     }
@@ -108,17 +259,16 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
-        if (current_user is null) {
+        if (current_user is null || classes is null) {
             current_user = await sessionStorage.GetItemAsync<User>("user");
-            if (current_user is null) OnBack();
-            
-            var dirFlash = await sessionStorage.GetItemAsync<string>("flashcardDirect");
-            if (dirFlash is not null) {
-                flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), dirFlash);
-                editingFlashcard = true;
-                page = Page.Flashcard;
-            }
-            StateHasChanged();
+            await InitData();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
         }
     }
 }

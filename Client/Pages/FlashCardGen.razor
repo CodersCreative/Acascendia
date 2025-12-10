@@ -72,7 +72,7 @@
     <MudItem xs="12" md="8" lg="8">
         <MudCard Style="border-radius: 16px;" Elevation="4" Class="p-2">
             <MudCardContent>
-                <MudTabs Rounded="true" RoundedSize="Medium" Elevation="2" Class="mt-1">
+                <MudTabs Rounded="true" RoundedSize="Medium" Elevation="2" Class="mt-6">
                     <!-- Tab 1: Type Notes -->
                     <MudTabPanel Text="Type Notes">
                         <MudTextField @bind-Value="UserNotes"
@@ -127,9 +127,6 @@
     </MudItem>
 </MudGrid>
 
-<br />
-
-
 @if (flashcards.Any())
 {
     <MudText Typo="Typo.h5" Class="mt-8 mb-4" Align="Align.Center">Generated Flashcards</MudText>
@@ -151,6 +148,11 @@
             </MudItem>
         }
     </MudGrid>
+    <br/>
+    <br/>
+    <br/>
+    <br/>
+    <br/>
 }
 
 @code {
@@ -192,7 +194,7 @@
                 var c = await hub.InvokeAsync<FlashcardCard>(nameof(IAppHubServer.CreateFlashcardCard), flashcards[i]);
             }
             await sessionStorage.SetItemAsync("flashcardDirect", flashcard.id);
-            navigationManager.NavigateTo("/dash");
+            navigationManager.NavigateTo("/flashcard");
         }
     }
 

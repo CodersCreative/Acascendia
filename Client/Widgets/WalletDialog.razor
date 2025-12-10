@@ -25,6 +25,31 @@
                     <MudTextField T="float" Label="Money" HelperText="Add Money" @ref="moneyField" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Add" OnAdornmentClick="OnAddMoney" AdornmentAriaLabel="Add Money" />
                 }
                 <MudDivider/>
+                <MudStack Row="true">
+                    <MudButton FullWidth="true" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnTransfer">Transfer</MudButton>
+                    <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="() => {isBuying = !isBuying; StateHasChanged();}">Buy</MudButton>
+                </MudStack>
+                <MudDivider/>
+                
+                @if (transferUser is not null) {
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h6" Class="mb-4">Transfering To:</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-4">@transferUser.username</MudText>
+                        <MudTextField T="string" Label="Reason" AutoGrow="true" HelperText="Reason for transfer" @ref="reasonField" />
+                        <MudDivider/>
+                        <MudTextField T="float" Label="Amount" HelperText="Send Money" @ref="moneyField" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnTransferMoney" AdornmentAriaLabel="Send Money" />
+                    </MudStack>
+                }else if (isBuying) {
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h6" Class="mb-4">Add Money</MudText>
+                        <MudTextField T="string" Label="Reason" AutoGrow="true" HelperText="Reason for transfer" @ref="reasonField" />
+                        <MudTextField T="string" Label="Number" HelperText="PhoneNumber" @ref="phoneField"/>
+                        <MudDivider/>
+                        <MudTextField T="float" Label="Amount" HelperText="Add Money" @ref="moneyField" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Add" OnAdornmentClick="OnBuyMoney" AdornmentAriaLabel="Add Money" />
+                    </MudStack>
+                }
+                
+                <MudDivider/>
                 @if (payments.Any()) {
                     <MudText Typo="Typo.h6" Class="mb-4">Payments</MudText>
                     <MudStack>
@@ -59,19 +84,16 @@
                                         <MudText Typo="Typo.body1" Class="mb-4">Flashcard Purchase - @payment.reason</MudText>
                                     }else if (payment.reasonType == PaymentReasonType.Quiz) {
                                         <MudText Typo="Typo.body1" Class="mb-4">Quiz Purchase - @payment.reason</MudText>
-                                    }else {
+                                    }else if (payment.reasonType == PaymentReasonType.Transfer) {
                                         <MudText Typo="Typo.body1" Class="mb-4">Transfer - @payment.reason</MudText>
+                                    }else {
+                                        <MudText Typo="Typo.body1" Class="mb-4">Added Money - @payment.reason</MudText>
                                     }
                                 </MudStack>
                             </MudPaper>
                         }
                     </MudStack>
                 }
-                <MudStack Row="true">
-                    <MudButton FullWidth="true" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnAddMoney">Transfer</MudButton>
-                    <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnAddMoney">Buy</MudButton>
-                </MudStack>
-                
             }
         </MudCard>
    </DialogContent>
@@ -82,9 +104,13 @@
     public Action<User?> OnUserUpdated {get; set;} = (x) => {};
     private HubConnection? hub;
     private User current_user;
+    private User? transferUser;
+    private bool isBuying = false;
     private List<Payment> payments = [];
     private List<Payment> incomings = [];
     private MudTextField<float> moneyField;
+    private MudTextField<string> reasonField;
+    private MudTextField<string> phoneField;
     private bool allowDev = false;
 
     private async Task OnAddMoney()
@@ -97,7 +123,60 @@
             await sessionStorage.SetItemAsync("user", user);
             OnUserUpdated(user);
         }
+        await moneyField.Clear();
         StateHasChanged();
+    }
+
+    private async Task OnTransferMoney()
+    {
+        if (moneyField is null || transferUser is null || current_user is null || moneyField.Value > current_user.money) return;
+        
+        var payment = await hub.InvokeAsync<Payment?>(nameof(IAppHubServer.ProcessPayment), new Payment {
+            fromId = current_user.id,
+            toId = transferUser.id,
+            amount = moneyField.Value,
+            reason = reasonField?.Value ?? "",
+            reasonType = PaymentReasonType.Transfer,
+        });
+        if (payment is not null) payments.Add(payment);
+        var user = await hub.InvokeAsync<User?>(nameof(IAppHubServer.CheckUser), current_user.id);
+        if (user is not null) {
+            current_user = user;
+            await sessionStorage.SetItemAsync("user", user);
+            OnUserUpdated(user);
+        }
+        await moneyField.Clear();
+        transferUser = null;
+        StateHasChanged();
+    }
+
+    private async Task OnBuyMoney()
+    {
+        if (moneyField is null || phoneField is null || !phoneField.Value.Any() || transferUser is null || current_user is null || moneyField.Value > current_user.money) return;
+        
+        var payment = await hub.InvokeAsync<Payment?>(nameof(IAppHubServer.ProcessPayment), new Payment {
+            fromId = phoneField.Value,
+            toId = current_user.id,
+            amount = moneyField.Value,
+            reason = reasonField?.Value ?? "",
+            reasonType = PaymentReasonType.Buy,
+        });
+
+        if (payment is not null) payments.Add(payment);
+        await moneyField.Clear();
+        isBuying = false;
+        StateHasChanged();
+    }
+
+    private Task OnTransfer()
+    {
+        return Dialog.ShowAsync<SearchUserDialog>("", new DialogParameters() {
+            ["OnUserSelected"] = (User? user) => {if (current_user.id != user.id) {transferUser = user;StateHasChanged();}},
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
     }
 
     protected override async Task OnInitializedAsync() {

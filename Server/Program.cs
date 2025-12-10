@@ -71,24 +71,6 @@ app.Run();
 
 async Task InitializeDbAsync()
 {
-    HttpClient httpClient = new HttpClient();
-
-    var needsStart = false;
-
-    try
-    {
-        needsStart = !(await httpClient.GetAsync(surrealUrl)).IsSuccessStatusCode;
-    }catch (Exception e)
-    {
-        needsStart = true;
-    }
-
-    if (needsStart) {
-        Thread newThread = new Thread(new ThreadStart(() => Process.Start("surreal start memory --allow-all --unauthenticated")));
-        newThread.Start();
-        Thread.Sleep(500);
-    }
-
     var surrealDbClient = new SurrealDbClient(surreal);
     await DefineSchemaAsync(surrealDbClient);
 }
@@ -102,6 +84,10 @@ DEFINE FIELD IF NOT EXISTS username ON TABLE user TYPE string;
 DEFINE FIELD IF NOT EXISTS money ON TABLE user TYPE float;
 DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string;
 DEFINE FIELD IF NOT EXISTS password ON TABLE user TYPE string;
+
+DEFINE ANALYZER user_analyzer TOKENIZERS class, blank FILTERS lowercase, ascii;
+DEFINE INDEX username_index ON TABLE user COLUMNS username SEARCH ANALYZER user_analyzer BM25;
+DEFINE INDEX email_index ON TABLE user COLUMNS email SEARCH ANALYZER user_analyzer BM25;
 
 DEFINE TABLE IF NOT EXISTS class SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS name ON TABLE class TYPE string;

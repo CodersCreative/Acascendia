@@ -1,3 +1,6 @@
+@page "/chat/{id}"
+@page "/chat"
+
 @using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Shared
 @using studbud.Shared.Models
@@ -7,6 +10,7 @@
 @inject HubService hubService
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
 @implements IAsyncDisposable
+@layout DashLayout
 
 <!-- Main Chat Grid (Set a fixed height for the remaining area) -->
 <MudGrid Style="height:100%;">
@@ -132,8 +136,7 @@
 
 @code {
     [Parameter]
-    public Action<Chat?> OnChatChanged {get; set;} = (x) => {};
-    [Parameter]
+    public string? id {get; set;}
     public Chat? chat {get; set;}
     private List<Message>? messages = null;
     private List<string>? models = null;
@@ -214,11 +217,8 @@
         if (chatId is null || (chatId == chat?.id && messages is not null)) {
             chat = null;
             messages = null;
-            OnChatChanged(null);
             return;
         }
-        chat = await hub!.InvokeAsync<Chat>(nameof(IAppHubServer.GetChatWithName), chatId, current_user.id);
-        OnChatChanged(chat);
         if (chat.userIds.Contains("AI")) {
             models = await hub.InvokeAsync<List<string>>(nameof(IAppHubServer.GetAIModels));
             if (models is null || models.Count <= 0) {
@@ -259,6 +259,9 @@
         await base.OnAfterRenderAsync(firstRender);
         if (current_user is null) {
             current_user = await sessionStorage.GetItemAsync<User>("user");
+            if (id is not null && chat is null) {
+                chat = await hub!.InvokeAsync<Chat>(nameof(IAppHubServer.GetChatWithName), id, current_user.id);
+            }
             chats = await hub.InvokeAsync<List<Chat>>(nameof(IAppHubServer.GetChatsFromUser), current_user.id);
 
             if (chat is not null) {

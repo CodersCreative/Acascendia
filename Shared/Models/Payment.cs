@@ -15,4 +15,5 @@ public enum PaymentReasonType
     Quiz,
     Flashcard,
     Transfer,
+    Buy,
 }

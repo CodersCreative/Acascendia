@@ -1,3 +1,5 @@
+@page "/quiz/{id}"
+@page "/quiz"
 @using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Shared
 @using studbud.Shared.Models
@@ -6,6 +8,7 @@
 @inject IDialogService Dialog
 @inject HubService hubService
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@layout Dashboard
 @implements IAsyncDisposable
 
 <!-- Main Chat Grid (Set a fixed height for the remaining area) -->
@@ -75,10 +78,8 @@
 
 @code {
     [Parameter]
-    public Action<Quiz?, bool> OnQuizChanged {get; set;} = (x, y) => {};
-    [Parameter]
+    public string? id {get; set;}
     public bool editing {get; set;} = false;
-    [Parameter]
     public Quiz? quiz {get; set;}
     private HubConnection? hub;
     private List<Quiz> quizzes = new();
@@ -89,7 +90,6 @@
             if (quizzes[i]?.id == quiz?.id) {
                 quizzes[i] = q;
                 quiz = q;
-                OnQuizChanged(q, true);
                 StateHasChanged();
                 return;
             }
@@ -102,24 +102,25 @@
 
         hub = hubService.GetHubConnection().Build();
         await hub.StartAsync();
+        if (id is not null && quiz is null) {
+            quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.GetQuiz), id);
+        }
     }
 
     private async Task LoadQuiz(string quizId, bool bypass = false) {
         if (quizId == quiz?.id && !bypass) {
             quiz = null;
-            OnQuizChanged(null, false);
             return;
         }
         quiz = null;
         StateHasChanged();
         quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.GetQuiz), quizId);
-        OnQuizChanged(quiz, editing);
         StateHasChanged();
     }
 
     private async Task OnCreateQuiz()
     {
-        quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.CreateQuiz), new Quiz {name = "New Quiz", code = new Random().Next(999999).ToString(),description = "",userId = current_user.id, published =false});
+        quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.CreateQuiz), new Quiz {name = "New Quiz", cost =0.0f, code = new Random().Next(999999).ToString(),description = "",userId = current_user.id, published =false});
         quizzes.Add(quiz);
         editing = true;
     }

@@ -14,7 +14,7 @@ if port_open; then
 	echo "SurrealDB already running at ${HOST}:${PORT}"
 else
 	echo "Starting SurrealDB..."
-	surreal start memory --allow-all --unauthenticated &
+	surreal start --allow-all --unauthenticated rocksdb://$HOME/.config/studbud/database.db &
 	surreal_pid=$!
 	surreal_started=1
 

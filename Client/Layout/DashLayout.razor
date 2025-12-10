@@ -1,0 +1,103 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Client.Widgets
+@using studbud.Shared.Models
+@inherits LayoutComponentBase
+@inject NavigationManager navigationManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject HubService hubService
+@layout MinLayout
+
+<MudLayout>
+    <MudAppBar Elevation="0" >
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnBack"/>
+        <MudText Typo="Typo.h5" Class="ml-3">studbud</MudText>
+        <MudSpacer />
+    </MudAppBar>
+    <MudDrawer @bind-Open="@open" Fixed="true" Elevation="0" ClipMode="DrawerClipMode.Always" Variant="@DrawerVariant.Mini" OpenMiniOnHover="true" Breakpoint="Breakpoint.None">
+        <MudNavMenu>
+            <MudNavMenu>
+                <MudNavLink IconColor="@(navigationManager.Uri.Contains("dash") ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Home)" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+                <MudNavLink IconColor="@(navigationManager.Uri.Contains("chat") ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Chat)" Icon="@Icons.Material.Filled.Chat">Chat</MudNavLink>
+                <MudNavLink IconColor="@(navigationManager.Uri.Contains("class") ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Class)" Icon="@Icons.Material.Filled.School">Class</MudNavLink>
+                <MudNavLink IconColor="@(navigationManager.Uri.Contains("quiz") ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Quiz)" Icon="@Icons.Material.Filled.Quiz">Quiz</MudNavLink>
+                <MudNavLink IconColor="@(navigationManager.Uri.Contains("flash") ? Color.Primary : Color.Default)" OnClick="() => SwitchPage(Page.Flashcard)" Icon="@Icons.Material.Filled.ViewCarousel">Flashcard</MudNavLink>
+            </MudNavMenu>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent>
+        <MudPaper Class="rounded-xl pa-6 mx-auto" Style="border-radius: 20px 0 0 0; width:100%; height:100%; padding : 20px;">
+            <Strips/>
+            @Body
+            <Shortcuts/>
+        </MudPaper>
+    </MudMainContent>
+</MudLayout>
+
+
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private bool open = false;
+    private HubConnection? hub;
+    private User? current_user;
+
+    enum Page {
+        Home,
+        Class,
+        Chat,
+        Quiz,
+        Flashcard,
+    }
+
+    private void DrawerToggle()
+    {
+        open = !open;
+    }
+
+    private void SwitchPage(Page p) {
+        switch (p) {
+            case Page.Chat:
+                navigationManager.NavigateTo($"/chat/");
+                break;
+            case Page.Class:
+                navigationManager.NavigateTo($"/class/");
+                break;
+            case Page.Flashcard:
+                navigationManager.NavigateTo($"/flashcard/");
+                break;
+            case Page.Home:
+                navigationManager.NavigateTo($"/dash");
+                break;
+            case Page.Quiz:
+                navigationManager.NavigateTo($"/quiz/");
+                break;
+
+        }
+    }
+
+    private void OnBack() {
+        navigationManager.NavigateTo("/");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (current_user is null) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+            if (current_user is null) OnBack();
+        }
+    }
+}

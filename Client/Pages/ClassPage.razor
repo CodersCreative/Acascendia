@@ -1,3 +1,5 @@
+@page "/class/{id}"
+@page "/class"
 @using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Shared
 @using studbud.Shared.Models
@@ -7,6 +9,7 @@
 @inject HubService hubService
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
 @implements IAsyncDisposable
+@layout DashLayout
 
 <!-- Main Chat Grid (Set a fixed height for the remaining area) -->
 <MudGrid Style="height:100%;">
@@ -68,8 +71,7 @@
 
 @code {
     [Parameter]
-    public Action<Class?> OnClassChanged {get; set;} = (x) => {};
-    [Parameter]
+    public string? id {get; set;}
     public Class? clss {get; set;}
     private HubConnection? hub;
     private List<Class> classes = new();
@@ -82,16 +84,18 @@
 
         hub = hubService.GetHubConnection().Build();
         await hub.StartAsync();
+
+        if (id is not null && clss is null) {
+            clss = await hub!.InvokeAsync<Class>(nameof(IAppHubServer.GetClass), id);
+        }
     }
 
     private async Task LoadClass(string classId, bool bypass = false) {
         if (classId == clss?.id && !bypass) {
             clss = null;
-            OnClassChanged(null);
             return;
         }
         clss = await hub!.InvokeAsync<Class>(nameof(IAppHubServer.GetClass), classId);
-        OnClassChanged(clss);
         StateHasChanged();
     }
 

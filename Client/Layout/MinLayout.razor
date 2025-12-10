@@ -6,9 +6,24 @@
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
-<Strips/>
-@Body
-<Shortcuts/>
+
+<div class="gradient-bg">
+    <!-- Animated blobs (background elements) -->
+    <div class="gradients-container">
+        <div class="blob blob1"></div>
+        <div class="blob blob2"></div>
+        <div class="blob blob3"></div>
+    </div>
+
+    <!-- Scrollable content wrapper (foreground elements) -->
+    <!-- This ID is targeted by the CSS to ensure scroll works -->
+    <div id="main-scroll-container" class="scrollable-content">
+                <Strips />
+                @Body
+                <Shortcuts />
+    </div>
+</div>
+
 
 @code {
 
