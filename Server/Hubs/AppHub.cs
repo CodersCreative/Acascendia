@@ -264,6 +264,47 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return await SendMessage(response);
     }
 
+    public async Task<List<Payment>> GetDisplayPayments(string userId)
+    {
+        var result = await dbClient.Query(
+            $"SELECT * FROM payment WHERE fromId = {userId} or toId = {userId};"
+        );
+
+
+        var arr = result.GetValue<List<DbPayment>>(0);
+        if (arr is not null)
+        {
+            var payments = arr.Select(x => x.ToBase()).ToList();
+            
+            for (var i = 0; payments.Count > i; i++)
+            {
+                if (payments[i].fromId == userId)
+                {
+                    payments[i].toId = (await GetUser(payments[i].toId)).username;
+                } else {
+                    payments[i].fromId = (await GetUser(payments[i].fromId)).username;
+                }
+
+                switch (payments[i].reasonType)
+                {
+                    case PaymentReasonType.Quiz:
+                        payments[i].reason = (await GetQuiz(payments[i].reason)).name;
+                        break;
+                    case PaymentReasonType.Flashcard:
+                        payments[i].reason = (await GetFlashcard(payments[i].reason)).name;
+                        break;
+                    
+                }
+            }
+
+            return payments;
+        }
+        else
+        {
+            return [];
+        }
+    }
+
     public async Task ResetChat(string parent)
     {
         await dbClient.Query($"DELETE message WHERE parentId = {parent};");
