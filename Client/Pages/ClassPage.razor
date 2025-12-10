@@ -1,0 +1,138 @@
+@page "/class/{id}"
+@page "/class"
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Shared.Models
+@using studbud.Client.Widgets
+@inject NavigationManager navigationManager
+@inject IDialogService Dialog
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+@layout DashLayout
+
+<!-- Main Chat Grid (Set a fixed height for the remaining area) -->
+<MudGrid Style="height:100%;">
+    <!-- Adjust 180px based on exact height of header and desired spacing -->
+    <MudItem xs="12" md="2" Style="height:100%;">
+        <!-- Page Header (Moved out of the grid for cleaner layout) -->
+        <MudText Typo="Typo.h5" Class="mt-4 mb-2" Style="font-weight:bold;">You</MudText>
+        <MudStack Row="true" Class="mb-4">
+            <MudText Typo="Typo.subtitle1" Class="align-self-center">@current_user?.username</MudText>
+        </MudStack>
+        <!-- This inner container must use 100% height and flex column layout -->
+        <div class="d-flex flex-column" style="height: 100%;">
+
+            <!-- Top Section: Contacts List (flex-grow-1 pushes bottom card down) -->
+            <div class="flex-grow-1 overflow-y-auto pr-2">
+                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">Classes</MudText>
+
+                @foreach (var c in classes)
+                {
+
+                    <MudCard Class="@(c.id == clss?.id ? "mb-2 elevation-4" : "mb-2 elevation-0 transparent-card")" Style="border-radius:12px">
+                        <MudButton Variant="Variant.Text"
+                                    Color="@(c.id == clss?.id ? Color.Primary : Color.Default)"
+                                    OnClick="@(()=>LoadClass(c.id))"
+                                    Style="width:100%; text-align:left; margin-bottom:8px; align-items:center; justify-content:flex-start; justify-items:center; align-content:center;">
+                            @c.name
+                        </MudButton>
+                    </MudCard>
+                }
+            </div>
+            <!-- End of Contacts List -->
+            <!-- Bottom Section: This will now be pinned to the bottom -->
+            <MudCard Class="mt-3 pa-2 elevation-4" Style="border-radius:15px">
+                <MudText Typo="Typo.body2" Class="mb-3">Chat with friends and Classmates</MudText>
+
+                <MudSpacer></MudSpacer>
+
+                <br />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Style="border-radius:15px" Size="Size.Small" OnClick="OnCreateClass" FullWidth="true">New Class</MudButton>
+            </MudCard>
+            <!-- End of Bottom Section -->
+
+        </div>
+    </MudItem>
+
+    <MudItem xs="12" md="10">
+        @if (clss is not null) {
+            <ClassView clss="@clss"/>
+        }else{
+            <MudText Typo="Typo.h6" Class="mb-2">
+                Select a class
+            </MudText>      
+        }
+    </MudItem>
+</MudGrid>
+
+
+
+@code {
+    [Parameter]
+    public string? id {get; set;}
+    public Class? clss {get; set;}
+    private HubConnection? hub;
+    private List<Class> classes = new();
+    private User? current_user;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+
+        if (id is not null && clss is null) {
+            clss = await hub!.InvokeAsync<Class>(nameof(IAppHubServer.GetClass), id);
+        }
+    }
+
+    private async Task LoadClass(string classId, bool bypass = false) {
+        if (classId == clss?.id && !bypass) {
+            clss = null;
+            return;
+        }
+        clss = await hub!.InvokeAsync<Class>(nameof(IAppHubServer.GetClass), classId);
+        StateHasChanged();
+    }
+
+    private Task OnCreateClass()
+    {
+        return Dialog.ShowAsync<CreateClassDialog>("", new DialogParameters() {
+            ["OnClassAdded"] = (Class? clss) => {
+                if (clss is not null) {
+                    classes.Add(clss);
+                }
+                StateHasChanged();
+            }
+        },new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (current_user is null) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+            classes = await hub.InvokeAsync<List<Class>>(nameof(IAppHubServer.GetClassesFromUser), current_user.id);
+
+            if (clss is not null) {
+                await LoadClass(clss.id, true);
+            }
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
+        }
+    }
+}

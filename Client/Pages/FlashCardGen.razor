@@ -189,7 +189,7 @@
                 var c = await hub.InvokeAsync<FlashcardCard>(nameof(IAppHubServer.CreateFlashcardCard), flashcards[i]);
             }
             await sessionStorage.SetItemAsync("flashcardDirect", flashcard.id);
-            navigationManager.NavigateTo("/dash");
+            navigationManager.NavigateTo("/flashcard");
         }
     }
 

@@ -1,3 +1,5 @@
+@page "/flashcard/{id}"
+@page "/flashcard"
 @using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Shared
 @using studbud.Shared.Models
@@ -7,6 +9,7 @@
 @inject HubService hubService
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
 @implements IAsyncDisposable
+@layout DashLayout
 
 <!-- Main Chat Grid (Set a fixed height for the remaining area) -->
 <MudGrid Style="height:100%;">
@@ -22,17 +25,17 @@
 
             <!-- Top Section: Contacts List (flex-grow-1 pushes bottom card down) -->
             <div class="flex-grow-1 overflow-y-auto pr-2">
-                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">My Quizzes</MudText>
+                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">My Flashcards</MudText>
 
-                @foreach (var q in quizzes)
+                @foreach (var f in flashcards)
                 {
 
-                    <MudCard Class="@(q.id == quiz?.id ? "mb-2 elevation-4" : "mb-2 elevation-0 transparent-card")" Style="border-radius:12px">
+                    <MudCard Class="@(f.id == flashcard?.id ? "mb-2 elevation-4" : "mb-2 elevation-0 transparent-card")" Style="border-radius:12px">
                         <MudButton Variant="Variant.Text"
-                                    Color="@(q.id == quiz?.id ? Color.Primary : Color.Default)"
-                                    OnClick="@(()=> {editing = true; LoadQuiz(q.id);})"
+                                    Color="@(f.id == flashcard?.id ? Color.Primary : Color.Default)"
+                                    OnClick="@(()=> {editing = true; LoadFlashcard(f.id);})"
                                     Style="width:100%; text-align:left; margin-bottom:8px; align-items:center; justify-content:flex-start; justify-items:center; align-content:center;">
-                            @q.name
+                            @f.name
                         </MudButton>
                     </MudCard>
                 }
@@ -46,8 +49,8 @@
 
                 <br />
                 <MudStack Row="true">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Style="border-radius:15px" Size="Size.Small" OnClick="OnCreateQuiz" FullWidth="true">New Quiz</MudButton>
-                    <MudIconButton Icon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" OnClick="OnFindQuiz"/>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Style="border-radius:15px" Size="Size.Small" OnClick="OnCreateFlashcard" FullWidth="true">New Flashcard</MudButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" OnClick="OnFindFlashcard"/>
                 </MudStack>
             </MudCard>
             <!-- End of Bottom Section -->
@@ -56,16 +59,16 @@
     </MudItem>
 
     <MudItem xs="12" md="10">
-        @if (quiz is not null) {
+        @if (flashcard is not null) {
             if (editing) {
-                <CreateQuiz quiz="@quiz" OnQuizChanged="(x) => UpdateCurrentQuiz(x)"/>
+                <CreateFlashcard flashcard="@flashcard" OnFlashcardChanged="(x) => UpdateCurrentFlashcard(x)"/>
             }else {
-                <AnswerQuiz quiz="@quiz"/>
+                <AnswerFlashcard flashcard="@flashcard"/>
             }
             <!-- <ClassView clss="@clss"/> -->
         }else{
             <MudText Typo="Typo.h6" Class="mb-2">
-                Select a quiz
+                Select a flashcard
             </MudText>      
         }
     </MudItem>
@@ -75,26 +78,13 @@
 
 @code {
     [Parameter]
-    public Action<Quiz?, bool> OnQuizChanged {get; set;} = (x, y) => {};
-    [Parameter]
+    public string? id {get; set;}
     public bool editing {get; set;} = false;
-    [Parameter]
-    public Quiz? quiz {get; set;}
+    public Flashcard? flashcard {get; set;}
     private HubConnection? hub;
-    private List<Quiz> quizzes = new();
+    private List<Flashcard> flashcards = new();
     private User? current_user;
 
-    private void UpdateCurrentQuiz(Quiz q) {
-        for (int i = 0; i < quizzes.Count; i++) {
-            if (quizzes[i]?.id == quiz?.id) {
-                quizzes[i] = q;
-                quiz = q;
-                OnQuizChanged(q, true);
-                StateHasChanged();
-                return;
-            }
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -102,34 +92,47 @@
 
         hub = hubService.GetHubConnection().Build();
         await hub.StartAsync();
+
+        if (id is not null && flashcard is null) {
+            flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), id);
+        }
     }
 
-    private async Task LoadQuiz(string quizId, bool bypass = false) {
-        if (quizId == quiz?.id && !bypass) {
-            quiz = null;
-            OnQuizChanged(null, false);
+    private void UpdateCurrentFlashcard(Flashcard f) {
+        for (int i = 0; i < flashcards.Count; i++) {
+            if (flashcards[i]?.id == flashcard?.id) {
+                flashcards[i] = f;
+                flashcard = f;
+                StateHasChanged();
+                return;
+            }
+        }
+    }
+
+    private async Task LoadFlashcard(string flashId, bool bypass = false) {
+        if (flashId == flashcard?.id && !bypass) {
+            flashcard = null;
             return;
         }
-        quiz = null;
+        flashcard = null;
         StateHasChanged();
-        quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.GetQuiz), quizId);
-        OnQuizChanged(quiz, editing);
+        flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), flashId);
         StateHasChanged();
     }
 
-    private async Task OnCreateQuiz()
+    private async Task OnCreateFlashcard()
     {
-        quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.CreateQuiz), new Quiz {name = "New Quiz", code = new Random().Next(999999).ToString(),description = "",userId = current_user.id, published =false});
-        quizzes.Add(quiz);
+        flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.CreateFlashcard), new Flashcard {name = "New Flashcard", code = new Random().Next(999999).ToString(),description = "",userId = current_user.id, published =false});
+        flashcards.Add(flashcard);
         editing = true;
     }
 
-    private Task OnFindQuiz()
+    private Task OnFindFlashcard()
     {
-        return Dialog.ShowAsync<SearchQuizDialog>("", new DialogParameters() {
-            ["OnQuizOpened"] = (Quiz? q) => {
-                if (q is not null) {
-                    quiz = q;
+        return Dialog.ShowAsync<SearchFlashcardDialog>("", new DialogParameters() {
+            ["OnFlashcardOpened"] = (Flashcard? f) => {
+                if (f is not null) {
+                    flashcard = f;
                     editing = false;
                 }
                 StateHasChanged();
@@ -147,12 +150,19 @@
         await base.OnAfterRenderAsync(firstRender);
         if (current_user is null) {
             current_user = await sessionStorage.GetItemAsync<User>("user");
-            quizzes = await hub.InvokeAsync<List<Quiz>>(nameof(IAppHubServer.GetQuizzesFromUser), current_user.id);
+            
+            var dirFlash = await sessionStorage.GetItemAsync<string>("flashcardDirect");
+            if (dirFlash is not null) {
+                flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), dirFlash);
+                editing = true;
+            }
 
-            if (quiz is not null) {
-                await LoadQuiz(quiz.id, true);
+            flashcards = await hub.InvokeAsync<List<Flashcard>>(nameof(IAppHubServer.GetFlashcardsFromUser), current_user.id);
+
+            if (flashcard is not null) {
+                await LoadFlashcard(flashcard.id, true);
             } else if (editing) {
-                await OnCreateQuiz();
+                await OnCreateFlashcard();
             }
             StateHasChanged();
         }
