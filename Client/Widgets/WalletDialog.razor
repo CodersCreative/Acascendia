@@ -27,7 +27,7 @@
                 <MudDivider/>
                 <MudStack Row="true">
                     <MudButton FullWidth="true" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnTransfer">Transfer</MudButton>
-                    <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="() => {isBuying = true; StateHasChanged();}">Buy</MudButton>
+                    <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="() => {isBuying = !isBuying; StateHasChanged();}">Buy</MudButton>
                 </MudStack>
                 <MudDivider/>
                 
@@ -171,7 +171,7 @@
     private Task OnTransfer()
     {
         return Dialog.ShowAsync<SearchUserDialog>("", new DialogParameters() {
-            ["OnUserSelected"] = (User? user) => {if (current_user.id != user.id) {transferUser = user;}},
+            ["OnUserSelected"] = (User? user) => {if (current_user.id != user.id) {transferUser = user;StateHasChanged();}},
         },new DialogOptions()
         {
 

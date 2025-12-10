@@ -120,7 +120,7 @@
 
     private async Task OnCreateQuiz()
     {
-        quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.CreateQuiz), new Quiz {name = "New Quiz", code = new Random().Next(999999).ToString(),description = "",userId = current_user.id, published =false});
+        quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.CreateQuiz), new Quiz {name = "New Quiz", cost =0.0f, code = new Random().Next(999999).ToString(),description = "",userId = current_user.id, published =false});
         quizzes.Add(quiz);
         editing = true;
     }

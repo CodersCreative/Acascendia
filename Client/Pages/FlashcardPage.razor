@@ -157,7 +157,9 @@
                 editing = true;
             }
 
+            try{
             flashcards = await hub.InvokeAsync<List<Flashcard>>(nameof(IAppHubServer.GetFlashcardsFromUser), current_user.id);
+            }catch(Exception e) {}
 
             if (flashcard is not null) {
                 await LoadFlashcard(flashcard.id, true);

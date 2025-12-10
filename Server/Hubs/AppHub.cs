@@ -836,7 +836,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<string> GetChatNameInternal(Chat chat, string userId)
     {
-        if (chat.name is null)
+        if (chat.name is null || !chat.name.Any())
         {
             var other = chat.userIds?.FirstOrDefault();
             if (other is null)
